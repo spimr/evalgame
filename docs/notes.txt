@@ -1,0 +1,80 @@
+Plot algorithms
+http://www.pims.math.ca/science/2008/08mgvw/gallery/abergeron.html
+
+
+https://books.google.com.mt/books?id=EbVrWLNiub4C&lpg=PA30&pg=PA28&hl=en#v=onepage&q&f=true
+
+https://yacas.readthedocs.io/en/latest/book_of_algorithms/basic.html
+
+
+Other
+http://www.peda.com/grafeq/gallery/rogue.html
+
+
+
+Git Hub
+-------
+user: spimr
+email: michal.spimr@gmail.com
+password: wimrule2
+repository: https://github.com/spimr/evalgame
+
+
+
+Generating SSH key
+------------------
+in Termux app:
+
+1) install openssh
+$ pkg install openssh
+
+Get:1 https://termux.net stable InRelease [1720 B]
+Get:2 https://termux.net stable/main arm Packages [66.3 kB]
+Get:3 https://termux.net stable/main all Packages [5792 B]
+Fetched 73.8 kB in 2s (27.5 kB/s)
+Reading package lists... Done
+Building dependency tree... Done
+7 packages can be upgraded. Run 'apt list --upgradable' to see them.
+Reading package lists... Done
+Building dependency tree... Done
+The following additional packages will be installed:
+  krb5 ldns libandroid-glob libdb libedit libutil termux-auth
+The following NEW packages will be installed:
+  krb5 ldns libandroid-glob libdb libedit libutil openssh termux-auth
+0 upgraded, 8 newly installed, 0 to remove and 7 not upgraded.
+Need to get 1679 kB of archives.
+After this operation, 7168 kB of additional disk space will be used.
+Do you want to continue? [Y/n] Y
+...
+
+2) generate key
+$ ssh-keygen -t rsa -b 4096 -C "michal.spimr@gmail.com"
+
+Generating public/private rsa key pair.
+Enter file in which to save the key (/data/data/com.termux/files/home/.ssh/id_rsa):
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in /data/data/com.termux/files/home/.ssh/id_rsa.
+Your public key has been saved in /data/data/com.termux/files/home/.ssh/id_rsa.pub.
+The key fingerprint is:
+SHA256:B7E+S7zS7FTp5M3qli0jXL73sj70UrJh3l7VoQ94dNU michal.spimr@gmail.com
+The key's randomart image is:
++---[RSA 4096]----+
+|        .       o|
+|         o      E|
+|        o    . o |
+|       o . .o o o|
+|        S =. +  o|
+|       + X.o* + .|
+|      ..*oo*oB ..|
+|       +o *.O o. |
+|        .++*oBo  |
++----[SHA256]-----+
+
+3) Check SSH agent and add private key to it
+$ eval "$(ssh-agent -s)"
+Agent pid 4685
+
+$ ssh-add ~/.ssh/id_rsa
+Identity added: /data/data/com.termux/files/home/.ssh/id_rsa (michal.spimr@gmail.com)
+
