@@ -79,7 +79,7 @@ public class EvalGame implements ApplicationListener
             });
         expressionFieldValidBackground = null;
         expressionFieldInvalidBackground = null;
-        
+
         expressionStatusLabel = new Label("", skin);
         expressionStatusLabel.setWrap(true);
 
@@ -164,7 +164,7 @@ public class EvalGame implements ApplicationListener
     public void resetButtonAction()
     {
         graph.calculateDomain();
-        graph.calculatePlot(PLOT_ALGORITHM);
+        graph.calculateGraph(PLOT_ALGORITHM);
     }
 
     protected void minusButtonAction()
@@ -208,7 +208,7 @@ public class EvalGame implements ApplicationListener
         if (validExpression)
         {
             graph.calculateDomain();
-            graph.calculatePlot(PLOT_ALGORITHM);
+            graph.calculateGraph(PLOT_ALGORITHM);
         }
         // expressionField.getStyle().background = getExpressionFieldBackground(validExpression);
     }
@@ -259,39 +259,19 @@ public class EvalGame implements ApplicationListener
         logTexts.add("fps=" + Math.round(1 / Gdx.graphics.getDeltaTime()));
 
         // begin
-        startBatch();
+        graph.startBatch();
 
         // x-labels
         renderXAxis();
-
-        // y-labels
-        for (float y = graph.yMin + graph.yGrid; y < graph.yMax; y += graph.yGrid)
-        {
-            graph.graph2Screen(start, graph.xMin, y);
-            graph.graph2Screen(end, graph.xMax, y);
-            renderLine(start, end, 1, NumberUtil.isZero(y) ? Color.BLACK : Color.LIGHT_GRAY);
-
-            if (NumberUtil.isZero(y))
-            {
-                continue;
-            }
-
-            graph.graph2Screen(start, -5 * (graph.xMax - graph.xMin) / screenWidth * camera.zoom, y);
-            graph.graph2Screen(end, 5 * (graph.xMax - graph.xMin) / screenWidth * camera.zoom, y);
-            renderLine(start, end, 3, Color.BLACK);
-
-            String label = NumberUtil.toGridString(y, graph.yGrid);
-            graph.graph2Screen(start, 0, y);
-            projectVector.set(start, 0);
-            camera.project(projectVector);
-            renderText(label, projectVector.x - 10, projectVector.y, ALIGN_LEFT, ALIGN_CENTER);
-        }
+        renderYAxis();
+        //renderXAxisLabels();
+        //renderYAxisLabels();
 
         // graph
         renderGraph();
 
         // buttons and texts
-        setSettings(ShapeRenderer.ShapeType.Line, 1f);
+        graph.setSettings(ShapeRenderer.ShapeType.Line, 1f);
         renderLogTexts();
 
         // stage
@@ -299,47 +279,7 @@ public class EvalGame implements ApplicationListener
         stage.draw();
 
         // end
-        endBatch();
-    }
-
-    // --------------------------------------------------
-    // Batch, ShapeRenderer and Camera
-    // --------------------------------------------------
-    boolean batchStarted = false;
-    ShapeRenderer.ShapeType shapeType;
-    float lineWidth;
-
-    protected void setSettings(ShapeRenderer.ShapeType shapeType, float lineWidth)
-    {
-        if (this.shapeType != shapeType || this.lineWidth != lineWidth)
-        {
-            if (batchStarted)
-            {
-                endBatch();
-            }
-            Gdx.gl.glLineWidth(lineWidth);
-            shapeRenderer.setProjectionMatrix(camera.combined);
-            shapeRenderer.begin(shapeType);
-            batch.begin();
-            batchStarted = true;
-            this.shapeType = shapeType;
-            this.lineWidth = lineWidth;
-        }
-    }
-
-    protected void startBatch()
-    {
-        shapeType = null;
-        lineWidth = 0;
-        batchStarted = false;
-        setSettings(ShapeRenderer.ShapeType.Line, 1f);
-    }
-
-    protected void endBatch()
-    {
-        batch.end();
-        shapeRenderer.end();
-        batchStarted = false;
+        graph.endBatch();
     }
 
     // --------------------------------------------------
@@ -347,16 +287,24 @@ public class EvalGame implements ApplicationListener
     // --------------------------------------------------
     protected void renderXAxis()
     {
+        for (int i=0; i < graph.yAxisLineStart.size(); i++)
+        {
+            renderLine(graph.yAxisLineStart.get(i), graph.yAxisLineEnd.get(i), //
+                       1, //
+                       NumberUtil.isZero(graph.yAxisLineStart.get(i).x) ? Color.BLACK : Color.LIGHT_GRAY);
+        }
+        for (int i=0; i < graph.yAxisMarkStart.size(); i++)
+        {
+            renderLine(graph.yAxisMarkStart.get(i), graph.yAxisMarkEnd.get(i), //
+                       3, //
+                       Color.BLACK);
+        }
+    }
+
+    protected void renderXAxisLabels()
+    {
         for (float x = graph.xMin + graph.xGrid; x < graph.xMax; x += graph.xGrid)
         {
-            graph.graph2Screen(start, x, graph.yMin);
-            graph.graph2Screen(end, x, graph.yMax);
-            renderLine(start, end, 1, NumberUtil.isZero(x) ? Color.BLACK : Color.LIGHT_GRAY);
-
-            graph.graph2Screen(start, x, -5 * (graph.yMax - graph.yMin) / screenHeight * camera.zoom);
-            graph.graph2Screen(end, x, 5 * (graph.yMax - graph.yMin) / screenHeight * camera.zoom);
-            renderLine(start, end, 3, Color.BLACK);
-
             String label = NumberUtil.toGridString(x, graph.xGrid);
             renderXAxisText(label, x, 0);
         }
@@ -372,70 +320,95 @@ public class EvalGame implements ApplicationListener
         renderText(text, renderXAxisText_vector3.x, renderXAxisText_vector3.y - 10 - line * 20, ALIGN_CENTER, ALIGN_NO);
     }
 
+    protected void renderYAxis()
+    {
+        for (int i=0; i < graph.xAxisLineStart.size(); i++)
+        {
+            renderLine(graph.xAxisLineStart.get(i), graph.xAxisLineEnd.get(i), //
+                       1, //
+                       NumberUtil.isZero(graph.xAxisLineStart.get(i).y) ? Color.BLACK : Color.LIGHT_GRAY);
+        }
+        for (int i=0; i < graph.xAxisMarkStart.size(); i++)
+        {
+            renderLine(graph.xAxisMarkStart.get(i), graph.xAxisMarkEnd.get(i), //
+                       3, //
+                       Color.BLACK);
+        }
+        /*
+        for (float y = graph.yMin + graph.yGrid; y < graph.yMax; y += graph.yGrid)
+        {
+            graph.graph2Screen(start, graph.xMin, y);
+            graph.graph2Screen(end, graph.xMax, y);
+            renderLine(start, end, 1, NumberUtil.isZero(y) ? Color.BLACK : Color.LIGHT_GRAY);
+
+            if (NumberUtil.isZero(y))
+            {
+                continue;
+            }
+
+            graph.graph2Screen(start, -5 * (graph.xMax - graph.xMin) / screenWidth * camera.zoom, y);
+            graph.graph2Screen(end, 5 * (graph.xMax - graph.xMin) / screenWidth * camera.zoom, y);
+            renderLine(start, end, 3, Color.BLACK);
+        }
+        */
+    }
+
+    protected void renderYAxisLabels()
+    {
+        for (float y = graph.yMin + graph.yGrid; y < graph.yMax; y += graph.yGrid)
+        {
+            String label = NumberUtil.toGridString(y, graph.yGrid);
+            renderYAxisText(label, y, 0);
+        }
+    }
+
+    Vector2 renderYAxisText_vector2 = new Vector2();
+    Vector3 renderYAxisText_vector3 = new Vector3();
+    protected void renderYAxisText(String text, float graphY, float line)
+    {
+        graph.graph2Screen(renderYAxisText_vector2, 0, graphY);
+        renderYAxisText_vector3.set(renderYAxisText_vector2, 0);
+        camera.project(renderYAxisText_vector3);
+        renderText(text, renderYAxisText_vector3.x - 10, renderYAxisText_vector3.y - line * 20, ALIGN_LEFT, ALIGN_CENTER);
+    }
+
+
+
     // --------------------------------------------------
     // Graph
     // --------------------------------------------------
-    Vector2 blueDot = new Vector2();
-
     public void renderGraph()
     {
+        Vector2 start =null;
+        Vector2 end=null;
         logTexts.addAll(graph.plot.log);
 
-        boolean startInitialized = false;
-        boolean endInitialized = false;
-        long gridPointsCount =0;
-        float gridPointsToX = graph.graphX2UpperSnapX(graph.xMin + graph.xGrid);
-        for (Vector2 point : graph.plot.points)
+        for (int i=0; i < graph.plot.graphPoints.size(); i++)
         {
-            if (point != null && point.x > -0.3 && point.x < -0.2)
-            {
-                logTexts.add(NumberUtil.toString(point, 4));
-            }
-            // prepare end point
-            if (point != null)
-            {
-                graph.graph2Screen(end, point.x, point.y);
-                float snapX = graph.graphX2UpperSnapX(point.x);
-                if (snapX <= gridPointsToX)
-                {
-                    gridPointsCount++;
-                }
-                else 
-                {
-                    renderXAxisText(Long.toString(gridPointsCount), gridPointsToX - graph.xGrid / 2, 1);
-                    gridPointsCount = 1;
-                    gridPointsToX = snapX;
-                }
-            }
-            endInitialized = point != null;
+            end = graph.plot.screenPoints.get(i);
+            Vector2 blueDot = graph.plot.blueDotScreenPosition.get(i);
 
-            // render line from start point to end point
-            if (startInitialized && endInitialized)
+            if (start != null && end != null)
             {
                 renderLine(start, end, 1, Color.BLACK);
             }
-
-            // render red blob around end point
-            if (PLOT_RED_DOTS && endInitialized)
+            if (end != null && PLOT_RED_DOTS)
             {
-                GdxUtil.renderFilledRectangle(shapeRenderer, camera, end.x, end.y, Color.RED, 4);
+                //GdxUtil.renderFilledRectangle(shapeRenderer, camera, end.x, end.y, Color.RED, 4);
             }
-
-            // render blue blob around end point x axis projectio 
-            if (PLOT_BLUE_DOTS && endInitialized)
+            if (blueDot != null && PLOT_BLUE_DOTS)
             {
-                graph.graph2Screen(blueDot, point.x, 0);
-                GdxUtil.renderFilledRectangle(shapeRenderer, camera, blueDot.x, blueDot.y, Color.BLUE, 4);
+                //GdxUtil.renderFilledRectangle(shapeRenderer, camera, blueDot.x, blueDot.y, Color.BLUE, 4);
             }
-
-            // prepare start point
-            if (end != null)
-            {
-                start.set(end);
-            }
-            startInitialized = endInitialized;
+            start = end;
         }
-        renderXAxisText(Long.toString(gridPointsCount), gridPointsToX - graph.xGrid / 2, 1);
+
+        for (int i=0; i < graph.plot.pointsCountXAxisText.size(); i++)
+        {
+            String text = graph.plot.pointsCountXAxisText.get(i);
+            Float x = graph.plot.pointsCountXAxisGraphPosition.get(i);
+            renderXAxisText(text, x, 1);
+        }
     }
 
     // --------------------------------------------------
@@ -488,10 +461,10 @@ public class EvalGame implements ApplicationListener
         float rectY = renderText_ProjectVector.y;
         float rectWidth = camera.zoom * renderText_RenderedTextBoxSize.x;
         float rectHeight = camera.zoom * renderText_RenderedTextBoxSize.y;
-        setSettings(ShapeRenderer.ShapeType.Filled, 1f);   
+        graph.setSettings(ShapeRenderer.ShapeType.Filled, 1f);   
         shapeRenderer.setColor(Color.WHITE);
         shapeRenderer.rect(rectX, rectY - rectHeight, rectWidth, rectHeight);
-        setSettings(ShapeRenderer.ShapeType.Line, 1f);
+        graph.setSettings(ShapeRenderer.ShapeType.Line, 1f);
         font.draw(batch, layout, x + 2, y - 3);
     }
 
@@ -501,7 +474,7 @@ public class EvalGame implements ApplicationListener
     protected void renderLine(Vector2 start, Vector2 end, float lineWidth, Color color)
     {
         shapeRenderer.setColor(color);
-        setSettings(shapeType, lineWidth);
+        graph.setSettings(null, lineWidth);
         shapeRenderer.line(start, end);
     }
 
@@ -518,9 +491,9 @@ public class EvalGame implements ApplicationListener
         screenWidth = width;
         screenHeight = height;
         stage.getViewport().update(screenWidth, screenHeight, true);
-        
-        graph.setScreenSize (screenWidth, screenHeight);
-        graph.calculatePlot(PLOT_ALGORITHM);
+
+        graph.setScreenSize(screenWidth, screenHeight);
+        graph.calculateGraph(PLOT_ALGORITHM);
     }
 
     @Override
@@ -591,7 +564,7 @@ public class EvalGame implements ApplicationListener
 
             if (changed)
             {
-                graph.calculatePlot(PLOT_ALGORITHM);
+                graph.calculateGraph(PLOT_ALGORITHM);
             }
 
             return true;
@@ -669,7 +642,7 @@ public class EvalGame implements ApplicationListener
 
             if (changed)
             {
-                graph.calculatePlot(PLOT_ALGORITHM);
+                graph.calculateGraph(PLOT_ALGORITHM);
             }
             return true;
         }

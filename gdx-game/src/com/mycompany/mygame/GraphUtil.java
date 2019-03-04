@@ -9,7 +9,7 @@ public class GraphUtil
     public static int PLOT_ALGORITHM_ADAPTIVE_STEP = 2;
 
     public static Plot plotGraph(Graph graph,
-                                       int algorithm)
+                                 int algorithm)
     {
         Plot result;
         if (algorithm == PLOT_ALGORITHM_STATIC_STEP)
@@ -45,7 +45,7 @@ public class GraphUtil
             {
                 point = new Vector2(x, y);
             }
-            result.points.add(point);
+            result.graphPoints.add(point);
             if (point == null)
             {
                 result.log.add((point == null ? "SKIP" : "POINT") + "f(" + NumberUtil.toString(x) + ")=" + NumberUtil.toString(y));
@@ -60,17 +60,19 @@ public class GraphUtil
         result.log.add("Adaptive Plot Algorithm");
         Vector2 graphPixel = graph.getGraphPixel();
         result.log.add("graphPixel=[" + NumberUtil.toString(graphPixel.x) + "," + NumberUtil.toString(graphPixel.y) + "]");
-        float xStep = graphPixel.x * 5; 
+        float xStep = graphPixel.x * 1; 
+        float xTolerance = graphPixel.x;
         float yTolerance = graphPixel.y;
-        int maxDepth = 10;
+        int maxDepth = 5;
 
-        plotAlgorithmAdaptiveStep(graph,graph.xMin, graph.xMax, xStep, yTolerance, maxDepth, result);
+        plotAlgorithmAdaptiveStep(graph, graph.xMin, graph.xMax, xStep, xTolerance, yTolerance, maxDepth, result);
         return result;
     }
 
     private static void plotAlgorithmAdaptiveStep(Graph graph,
-    float xFrom, float xTo,
+                                                  float xFrom, float xTo,
                                                   float xStep, 
+                                                  float xTolerance,
                                                   float yTolerance, 
                                                   int maxDepth, 
                                                   Plot plot)
@@ -88,12 +90,12 @@ public class GraphUtil
             if (Math.abs(ym - yp) <= yTolerance || maxDepth == 0)
             {
                 Vector2 point1 = new Vector2(x1, y1);
-                plot.points.add(point1);
+                plot.graphPoints.add(point1);
             }
             else
             {
                 //log.add("RECURSE (" + maxDepth + ") AT " + x);
-                plotAlgorithmAdaptiveStep(graph, x1, x2, xStep / 2, yTolerance, maxDepth - 1, plot);
+                plotAlgorithmAdaptiveStep(graph, x1, x2, xStep / 2, xTolerance, yTolerance, maxDepth - 1, plot);
             }
             x = x2;
         }
