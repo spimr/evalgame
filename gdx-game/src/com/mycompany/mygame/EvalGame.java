@@ -138,22 +138,21 @@ public class EvalGame implements ApplicationListener
         stage.addActor(mainTable);
 
         // graph related (low level gdx)
-        //screenWidth = Gdx.graphics.sc
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
         camera = new OrthographicCamera();
         font = skin.get("graph-font", BitmapFont.class);
         layout = new GlyphLayout();
 
-        // imput processor
-        // GestureDetector graphInputProcessor = new GestureDetector(new ExploreGraphListener());
-        GestureDetector graphInputProcessor = new GestureDetector(new CameraDrivenGestureListener(camera));
-        InputMultiplexer inputMultiplexer = new InputMultiplexer(stage, graphInputProcessor);
-        Gdx.input.setInputProcessor(inputMultiplexer);
-
         // init
         graph.setGdxObjects(batch, shapeRenderer, camera);
         initExpression(graph.expression);
+
+        // input processor
+        // GestureDetector graphInputProcessor = new GestureDetector(new ExploreGraphListener());
+        GestureDetector graphInputProcessor = new GestureDetector(new CameraDrivenGestureListener(graph));
+        InputMultiplexer inputMultiplexer = new InputMultiplexer(stage, graphInputProcessor);
+        Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
     public void exitButtonAction()
@@ -256,22 +255,24 @@ public class EvalGame implements ApplicationListener
         logTexts.add("screenHeight=" + screenHeight);
         logTexts.add("x=<" + NumberUtil.toString(graph.xMin, 3) + "," + NumberUtil.toString(graph.xMax, 3) + "> grid " + NumberUtil.toString(graph.xGrid, 3));
         logTexts.add("y=<" + NumberUtil.toString(graph.yMin, 3) + "," + NumberUtil.toString(graph.yMax, 3) + "> grid " + NumberUtil.toString(graph.yGrid, 3));
+        logTexts.add("zoom=" + camera.zoom);
         logTexts.add("fps=" + Math.round(1 / Gdx.graphics.getDeltaTime()));
 
         // begin
         graph.startBatch();
 
-        // x-labels
-        renderXAxis();
-        renderYAxis();
-        //renderXAxisLabels();
-        //renderYAxisLabels();
+        // axis
+        renderXAxisLines();
+        renderYAxisLines();
+        renderXAxisMarks();
+        renderYAxisMarks();
 
         // graph
         renderGraph();
 
-        // buttons and texts
-        graph.setSettings(ShapeRenderer.ShapeType.Line, 1f);
+        // texts
+        renderXAxisLabels();
+        renderYAxisLabels();
         renderLogTexts();
 
         // stage
@@ -285,14 +286,18 @@ public class EvalGame implements ApplicationListener
     // --------------------------------------------------
     // Axis
     // --------------------------------------------------
-    protected void renderXAxis()
+    protected void renderXAxisLines()
     {
         for (int i=0; i < graph.yAxisLineStart.size(); i++)
         {
             renderLine(graph.yAxisLineStart.get(i), graph.yAxisLineEnd.get(i), //
                        1, //
-                       NumberUtil.isZero(graph.yAxisLineStart.get(i).x) ? Color.BLACK : Color.LIGHT_GRAY);
+                       Color.LIGHT_GRAY);
         }
+    }
+
+    protected void renderXAxisMarks()
+    {
         for (int i=0; i < graph.yAxisMarkStart.size(); i++)
         {
             renderLine(graph.yAxisMarkStart.get(i), graph.yAxisMarkEnd.get(i), //
@@ -303,76 +308,45 @@ public class EvalGame implements ApplicationListener
 
     protected void renderXAxisLabels()
     {
-        for (float x = graph.xMin + graph.xGrid; x < graph.xMax; x += graph.xGrid)
+        for (int i=0; i < graph.xAxisText.size(); i++)
         {
-            String label = NumberUtil.toGridString(x, graph.xGrid);
-            renderXAxisText(label, x, 0);
+            renderText(graph.xAxisText.get(i), 
+                       graph.xAxisTextPosition.get(i).x,
+                       graph.xAxisTextPosition.get(i).y,
+                       ALIGN_CENTER, ALIGN_NO);
         }
     }
 
-    Vector2 renderXAxisText_vector2 = new Vector2();
-    Vector3 renderXAxisText_vector3 = new Vector3();
-    protected void renderXAxisText(String text, float graphX, float line)
-    {
-        graph.graph2Screen(renderXAxisText_vector2, graphX, 0);
-        renderXAxisText_vector3.set(renderXAxisText_vector2, 0);
-        camera.project(renderXAxisText_vector3);
-        renderText(text, renderXAxisText_vector3.x, renderXAxisText_vector3.y - 10 - line * 20, ALIGN_CENTER, ALIGN_NO);
-    }
-
-    protected void renderYAxis()
+    protected void renderYAxisLines()
     {
         for (int i=0; i < graph.xAxisLineStart.size(); i++)
         {
             renderLine(graph.xAxisLineStart.get(i), graph.xAxisLineEnd.get(i), //
                        1, //
-                       NumberUtil.isZero(graph.xAxisLineStart.get(i).y) ? Color.BLACK : Color.LIGHT_GRAY);
+                       Color.LIGHT_GRAY);
         }
+    }
+
+    protected void renderYAxisMarks()
+    {
         for (int i=0; i < graph.xAxisMarkStart.size(); i++)
         {
             renderLine(graph.xAxisMarkStart.get(i), graph.xAxisMarkEnd.get(i), //
                        3, //
                        Color.BLACK);
         }
-        /*
-        for (float y = graph.yMin + graph.yGrid; y < graph.yMax; y += graph.yGrid)
-        {
-            graph.graph2Screen(start, graph.xMin, y);
-            graph.graph2Screen(end, graph.xMax, y);
-            renderLine(start, end, 1, NumberUtil.isZero(y) ? Color.BLACK : Color.LIGHT_GRAY);
-
-            if (NumberUtil.isZero(y))
-            {
-                continue;
-            }
-
-            graph.graph2Screen(start, -5 * (graph.xMax - graph.xMin) / screenWidth * camera.zoom, y);
-            graph.graph2Screen(end, 5 * (graph.xMax - graph.xMin) / screenWidth * camera.zoom, y);
-            renderLine(start, end, 3, Color.BLACK);
-        }
-        */
     }
-
+    
     protected void renderYAxisLabels()
     {
-        for (float y = graph.yMin + graph.yGrid; y < graph.yMax; y += graph.yGrid)
+        for (int i=0; i < graph.yAxisText.size(); i++)
         {
-            String label = NumberUtil.toGridString(y, graph.yGrid);
-            renderYAxisText(label, y, 0);
+            renderText(graph.yAxisText.get(i), 
+                       graph.yAxisTextPosition.get(i).x,
+                       graph.yAxisTextPosition.get(i).y,
+                       ALIGN_LEFT, ALIGN_CENTER);
         }
     }
-
-    Vector2 renderYAxisText_vector2 = new Vector2();
-    Vector3 renderYAxisText_vector3 = new Vector3();
-    protected void renderYAxisText(String text, float graphY, float line)
-    {
-        graph.graph2Screen(renderYAxisText_vector2, 0, graphY);
-        renderYAxisText_vector3.set(renderYAxisText_vector2, 0);
-        camera.project(renderYAxisText_vector3);
-        renderText(text, renderYAxisText_vector3.x - 10, renderYAxisText_vector3.y - line * 20, ALIGN_LEFT, ALIGN_CENTER);
-    }
-
-
 
     // --------------------------------------------------
     // Graph
@@ -406,8 +380,8 @@ public class EvalGame implements ApplicationListener
         for (int i=0; i < graph.plot.pointsCountXAxisText.size(); i++)
         {
             String text = graph.plot.pointsCountXAxisText.get(i);
-            Float x = graph.plot.pointsCountXAxisGraphPosition.get(i);
-            renderXAxisText(text, x, 1);
+            Vector2 position = graph.plot.pointsCountXAxisPosition.get(i);
+            renderText(text, position.x, position.y, ALIGN_CENTER, ALIGN_NO);
         }
     }
 

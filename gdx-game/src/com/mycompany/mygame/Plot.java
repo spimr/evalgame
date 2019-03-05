@@ -12,7 +12,7 @@ public class Plot
     ArrayList<Vector2> screenPoints = new ArrayList<>();
     ArrayList<Vector2> blueDotScreenPosition = new ArrayList<>();
     ArrayList<String> pointsCountXAxisText = new ArrayList<>();
-    ArrayList<Float> pointsCountXAxisGraphPosition = new ArrayList<>();    
+    ArrayList<Vector2> pointsCountXAxisPosition = new ArrayList<>();    
     
     Plot()
     {

@@ -12,14 +12,16 @@ import com.badlogic.gdx.input.*;
 
 public class CameraDrivenGestureListener extends GestureDetector.GestureAdapter
 {
+    Graph graph;
     OrthographicCamera camera;
     
     float lastZoom=-1;
     float lastInitialDistance=-1;
     
-    public CameraDrivenGestureListener (OrthographicCamera camera)
+    public CameraDrivenGestureListener (Graph graph)
     {
-        this.camera=camera;
+        this.graph=graph;
+        this.camera=graph.camera;
     }
     
     @Override
@@ -27,6 +29,7 @@ public class CameraDrivenGestureListener extends GestureDetector.GestureAdapter
     {
         camera.translate(-deltaX * camera.zoom, deltaY * camera.zoom);
         camera.update();
+        graph.calculateAxis();
         return false;
     }
 
@@ -50,6 +53,7 @@ public class CameraDrivenGestureListener extends GestureDetector.GestureAdapter
         }
         camera.zoom = zoom;
         camera.update();
+        graph.calculateAxis();
         return false;
     }
 }

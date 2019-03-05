@@ -32,6 +32,19 @@ public class Graph
     ShapeRenderer shapeRenderer;
     OrthographicCamera camera;
 
+    Vector<Vector2> yAxisLineStart = new Vector<>();
+    Vector<Vector2> yAxisLineEnd = new Vector<>();
+    Vector<Vector2> yAxisMarkStart = new Vector<>();
+    Vector<Vector2> yAxisMarkEnd = new Vector<>();
+    Vector<Vector2> xAxisLineStart = new Vector<>();
+    Vector<Vector2> xAxisLineEnd = new Vector<>();
+    Vector<Vector2> xAxisMarkStart = new Vector<>();
+    Vector<Vector2> xAxisMarkEnd = new Vector<>();
+    Vector<String> xAxisText = new Vector<>();
+    Vector<Vector2> xAxisTextPosition = new Vector<>();
+    Vector<String> yAxisText = new Vector<>();
+    Vector<Vector2> yAxisTextPosition = new Vector<>();
+
     Plot plot;
 
     // --------------------------------------------------
@@ -210,10 +223,27 @@ public class Graph
         setCameraZoom(1f);
     }
 
-    // ---------------------
+    public void calculateGraph(int plotAlgorithm)
+    {
+        calculateAxis();
+        calculatePlot(plotAlgorithm);
+    }
 
     public void calculateAxis()
     {
+        yAxisLineStart.clear();
+        yAxisLineEnd.clear();
+        yAxisMarkStart.clear();
+        yAxisMarkEnd.clear();
+        xAxisLineStart.clear();
+        xAxisLineEnd.clear();
+        xAxisMarkStart.clear();
+        xAxisMarkEnd.clear();
+        xAxisText.clear();
+        xAxisTextPosition.clear();
+        yAxisText.clear();
+        yAxisTextPosition.clear();
+
         for (float x = xMin + xGrid; x < xMax; x += xGrid)
         { 
             Vector2 start= new Vector2();
@@ -222,7 +252,6 @@ public class Graph
             graph2Screen(end, x, yMax);
             yAxisLineStart.add(start);
             yAxisLineEnd.add(end);
-            // renderLine(start, end, 1, NumberUtil.isZero(x) ? Color.BLACK : Color.LIGHT_GRAY);
 
             start = new Vector2();
             end = new Vector2();
@@ -230,13 +259,10 @@ public class Graph
             graph2Screen(end, x, 5 * (yMax - yMin) / screenHeight * camera.zoom);
             yAxisMarkStart.add(start);
             yAxisMarkEnd.add(end);
-            // renderLine(start, end, 3, Color.BLACK);
 
             String label = NumberUtil.toGridString(x, xGrid);
             xAxisText.add(label);
-            xAxisTextPosition.add(x);
-            //renderXAxisText(label, x, 0);
-
+            xAxisTextPosition.add(getXAxisTextPosition(x, 0));
         }
 
         for (float y = yMin + yGrid; y < yMax; y += yGrid)
@@ -248,8 +274,6 @@ public class Graph
             graph2Screen(end, xMax, y);
             xAxisLineStart.add(start);
             xAxisLineEnd.add(end);
-            
-            // renderLine(start, end, 1, NumberUtil.isZero(y) ? Color.BLACK : Color.LIGHT_GRAY);
 
             if (NumberUtil.isZero(y))
             {
@@ -262,47 +286,33 @@ public class Graph
             graph2Screen(end, 5 * (xMax - xMin) / screenWidth * camera.zoom, y);
             xAxisMarkStart.add(start);
             xAxisMarkEnd.add(end);
-            // renderLine(start, end, 3, Color.BLACK);
 
             String label = NumberUtil.toGridString(y, yGrid);
             yAxisText.add(label);
-            yAxisTextPosition.add(y);
-            // renderYAxisText(label, y, 0);
-
+            yAxisTextPosition.add(getYAxisTextPosition(y,0));
         }
-
-
     }
-    Vector<Vector2> yAxisLineStart = new Vector<>();
-    Vector<Vector2> yAxisLineEnd = new Vector<>();
-    Vector<Vector2> yAxisMarkStart = new Vector<>();
-    Vector<Vector2> yAxisMarkEnd = new Vector<>();
-    Vector<Vector2> xAxisLineStart = new Vector<>();
-    Vector<Vector2> xAxisLineEnd = new Vector<>();
-    Vector<Vector2> xAxisMarkStart = new Vector<>();
-    Vector<Vector2> xAxisMarkEnd = new Vector<>();
-    Vector<String> xAxisText = new Vector<>();
-    Vector<Float> xAxisTextPosition = new Vector<>();
-    Vector<String> yAxisText = new Vector<>();
-    Vector<Float> yAxisTextPosition = new Vector<>();
 
-    Vector2 renderYAxisText_vector2 = new Vector2();
-    Vector3 renderYAxisText_vector3 = new Vector3();
-
-    /*
-     protected void renderYAxisText(String text, float graphY, float line)
-     {
-     graph2Screen(renderYAxisText_vector2, 0, graphY);
-     renderYAxisText_vector3.set(renderYAxisText_vector2, 0);
-     camera.project(renderYAxisText_vector3);
-     renderText(text, renderYAxisText_vector3.x - 10, renderYAxisText_vector3.y - line * 20, ALIGN_LEFT, ALIGN_CENTER);
-     }
-     */
-
-    public void calculateGraph(int plotAlgorithm)
+    private Vector2 getXAxisTextPosition(float graphX, int line)
     {
-        calculateAxis();
-        calculatePlot(plotAlgorithm);
+        Vector2 result = new Vector2();
+        Vector3 vector = new Vector3();
+        graph2Screen(result, graphX, 0);
+        vector.set(result, 0);
+        camera.project(vector);
+        result.set(vector.x, vector.y - 10 - line * 20);
+        return result;
+    }
+
+    protected Vector2 getYAxisTextPosition(float graphY, float line)
+    {
+        Vector2 result = new Vector2();
+        Vector3 vector = new Vector3();
+        graph2Screen(result, 0, graphY);
+        vector.set(result, 0);
+        camera.project(vector);
+        result.set(vector.x - 10, vector.y - line * 20);
+        return result;
     }
 
     public void calculatePlot(int plotAlgorithm)
@@ -328,7 +338,7 @@ public class Graph
                 else 
                 {
                     plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
-                    plot.pointsCountXAxisGraphPosition.add(gridPointsToX - xGrid / 2);
+                    plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
                     gridPointsCount = 1;
                     gridPointsToX = snapX;
                 }
@@ -344,6 +354,6 @@ public class Graph
             }
         }
         plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
-        plot.pointsCountXAxisGraphPosition.add(gridPointsToX - xGrid / 2);
+        plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
     }
 }
