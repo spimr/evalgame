@@ -15,22 +15,26 @@ public class Graph
     // "x^2";
     // "sin(1/x)"
     // "x*(sin(x))^3"
+    
+    public static final int PLOT_ALGORITHM = GraphUtil.PLOT_ALGORITHM_ADAPTIVE_STEP;
+    public static final boolean PLOT_RED_DOTS = true;
+    public static final boolean PLOT_BLUE_DOTS = true;
 
-    String expression = TEST_EXPRESSION; 
+    SpriteBatch batch;
+    ShapeRenderer shapeRenderer;
+    OrthographicCamera camera;
+
     String expressionStatus;
 
+    String expression = TEST_EXPRESSION;    
+    int screenWidth;
+    int screenHeight;
     float xMin;
     float xMax;
     float xGrid;
     float yMin;
     float yMax;
     float yGrid;
-
-    int screenWidth;
-    int screenHeight;
-    SpriteBatch batch;
-    ShapeRenderer shapeRenderer;
-    OrthographicCamera camera;
 
     Vector<Vector2> yAxisLineStart = new Vector<>();
     Vector<Vector2> yAxisLineEnd = new Vector<>();
@@ -46,6 +50,7 @@ public class Graph
     Vector<Vector2> yAxisTextPosition = new Vector<>();
 
     Plot plot;
+    PlotCalculator plotCalculator;
 
     // --------------------------------------------------
     // Batch, ShapeRenderer and Camera
@@ -126,7 +131,6 @@ public class Graph
         shapeRenderer.end();
         batchStarted = false;
     }
-
 
     // --------------------------------------------------
     // Screen to Graph coordinates conversion
@@ -223,12 +227,6 @@ public class Graph
         setCameraZoom(1f);
     }
 
-    public void calculateGraph(int plotAlgorithm)
-    {
-        calculateAxis();
-        calculatePlot(plotAlgorithm);
-    }
-
     public void calculateAxis()
     {
         yAxisLineStart.clear();
@@ -315,45 +313,111 @@ public class Graph
         return result;
     }
 
-    public void calculatePlot(int plotAlgorithm)
+    public void calculatePlot(PlotCalculatorListener listener)
     {
-        plot = GraphUtil.plotGraph(this, plotAlgorithm);
-
-        // infer rendering values in the plot
-        long gridPointsCount =0;
-        float gridPointsToX = graphX2UpperSnapX(xMin + xGrid);
-        for (Vector2 point : plot.graphPoints)
+        if (plotCalculator!=null)
         {
-            // prepare end point
-            if (point != null)
-            {
-                Vector2 end=new Vector2();
-                graph2Screen(end, point.x, point.y);
-                plot.screenPoints.add(end);
-                float snapX = graphX2UpperSnapX(point.x);
-                if (snapX <= gridPointsToX)
-                {
-                    gridPointsCount++;
-                }
-                else 
-                {
-                    plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
-                    plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
-                    gridPointsCount = 1;
-                    gridPointsToX = snapX;
-                }
-
-                Vector2 blueDot = new Vector2();
-                graph2Screen(blueDot, point.x, 0);
-                plot.blueDotScreenPosition.add(blueDot);
-            }
-            else
-            {
-                plot.screenPoints.add(null);
-                plot.blueDotScreenPosition.add(null);
-            }
+            plotCalculator.setAborted();
         }
-        plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
-        plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
+        plotCalculator = new PlotCalculator(listener);
+        new Thread (plotCalculator).start();
+    }
+
+    public static class PlotCalculatorListener
+    {
+        void finished()
+        {
+        }
+        
+        void aborted()
+        {
+        }
+    }
+    
+    public class PlotCalculator implements Runnable
+    {
+        PlotCalculatorListener listener;
+        protected String progressText;
+        protected boolean aborted;
+        
+        public PlotCalculator(PlotCalculatorListener listener)
+        {
+            this.listener=listener;
+        }
+        
+        public void run()
+        {
+            calculate();
+        }
+        
+        public void setAborted ()
+        {
+            this.aborted = true;
+        }
+        
+        public boolean isAborted ()
+        {
+            return aborted;
+        }
+        
+        public void setProgressText (String progressText)
+        {
+            this.progressText=progressText;
+        }
+        
+        public String getProgressText()
+        {
+            return null;
+        }
+        
+        public void calculate()
+        {
+            plot = GraphUtil.plotGraph(Graph.this, PLOT_ALGORITHM);
+
+            plot.log.add("screenWidth=" + screenWidth);
+            plot.log.add("screenHeight=" + screenHeight);
+            
+            // infer rendering values in the plot
+            long gridPointsCount =0;
+            float gridPointsToX = graphX2UpperSnapX(xMin + xGrid);
+            for (Vector2 point : plot.graphPoints)
+            {
+                // prepare end point
+                if (point != null)
+                {
+                    Vector2 end=new Vector2();
+                    graph2Screen(end, point.x, point.y);
+                    plot.screenPoints.add(end);
+                    float snapX = graphX2UpperSnapX(point.x);
+                    if (snapX <= gridPointsToX)
+                    {
+                        gridPointsCount++;
+                    }
+                    else 
+                    {
+                        plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
+                        plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
+                        gridPointsCount = 1;
+                        gridPointsToX = snapX;
+                    }
+
+                    Vector2 blueDot = new Vector2();
+                    graph2Screen(blueDot, point.x, 0);
+                    plot.blueDotScreenPosition.add(blueDot);
+                }
+                else
+                {
+                    plot.screenPoints.add(null);
+                    plot.blueDotScreenPosition.add(null);
+                }
+            }
+            plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
+            plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
+        }
+        }
+    
+    public boolean isCalculating()
+    {
+        return plotCalculator!=null;
     }
 }

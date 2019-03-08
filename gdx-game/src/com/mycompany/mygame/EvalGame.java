@@ -21,11 +21,6 @@ public class EvalGame implements ApplicationListener
     public static final int ALIGN_TOP = 1;
     public static final int ALIGN_CENTER = 2;
 
-    public static final int PLOT_ALGORITHM = GraphUtil.PLOT_ALGORITHM_ADAPTIVE_STEP;
-
-    public static final boolean PLOT_RED_DOTS = true;
-    public static final boolean PLOT_BLUE_DOTS = true;
-
     // stage and actors
     Stage stage;
     Skin skin;
@@ -44,7 +39,6 @@ public class EvalGame implements ApplicationListener
     ImageTextButton minusButton;
 
     // batch and shape renderer for graph
-    int screenWidth;
     int screenHeight;
     SpriteBatch batch;
     ShapeRenderer shapeRenderer;
@@ -53,6 +47,7 @@ public class EvalGame implements ApplicationListener
     GlyphLayout layout;
 
     Graph graph = new Graph();
+    GraphUpdater graphUpdater=new GraphUpdater();
 
     // --------------------------------------------------
     // create method
@@ -163,7 +158,8 @@ public class EvalGame implements ApplicationListener
     public void resetButtonAction()
     {
         graph.calculateDomain();
-        graph.calculateGraph(PLOT_ALGORITHM);
+        graph.calculateAxis();
+        graph.calculatePlot(graphUpdater);
     }
 
     protected void minusButtonAction()
@@ -207,32 +203,10 @@ public class EvalGame implements ApplicationListener
         if (validExpression)
         {
             graph.calculateDomain();
-            graph.calculateGraph(PLOT_ALGORITHM);
+            graph.calculateAxis();
+            graph.calculatePlot(graphUpdater);
         }
-        // expressionField.getStyle().background = getExpressionFieldBackground(validExpression);
     }
-
-    public Drawable getExpressionFieldBackground(boolean validExpression)
-    {
-        Drawable result = validExpression ? expressionFieldValidBackground : expressionFieldInvalidBackground;
-        if (result == null)
-        {
-            Color color = validExpression ? Color.WHITE : Color.RED;
-            float width = expressionField.getWidth();
-            float height = expressionField.getHeight();
-            result = GdxUtil.getFilledRectangle(width, height, color);
-            if (validExpression)
-            {
-                expressionFieldValidBackground = result;
-            }
-            else
-            {
-                expressionFieldInvalidBackground = result;
-            }
-        }   
-        return result;
-    }
-
 
     // --------------------------------------------------
     // render method
@@ -251,8 +225,6 @@ public class EvalGame implements ApplicationListener
         logTexts.clear();
 
         // log
-        logTexts.add("screenWidth=" + screenWidth);
-        logTexts.add("screenHeight=" + screenHeight);
         logTexts.add("x=<" + NumberUtil.toString(graph.xMin, 3) + "," + NumberUtil.toString(graph.xMax, 3) + "> grid " + NumberUtil.toString(graph.xGrid, 3));
         logTexts.add("y=<" + NumberUtil.toString(graph.yMin, 3) + "," + NumberUtil.toString(graph.yMax, 3) + "> grid " + NumberUtil.toString(graph.yGrid, 3));
         logTexts.add("zoom=" + camera.zoom);
@@ -336,7 +308,7 @@ public class EvalGame implements ApplicationListener
                        Color.BLACK);
         }
     }
-    
+
     protected void renderYAxisLabels()
     {
         for (int i=0; i < graph.yAxisText.size(); i++)
@@ -353,35 +325,38 @@ public class EvalGame implements ApplicationListener
     // --------------------------------------------------
     public void renderGraph()
     {
-        Vector2 start =null;
-        Vector2 end=null;
-        logTexts.addAll(graph.plot.log);
-
-        for (int i=0; i < graph.plot.graphPoints.size(); i++)
+        if (graph.plot != null)
         {
-            end = graph.plot.screenPoints.get(i);
-            Vector2 blueDot = graph.plot.blueDotScreenPosition.get(i);
+            Vector2 start =null;
+            Vector2 end=null;
+            logTexts.addAll(graph.plot.log);
 
-            if (start != null && end != null)
+            for (int i=0; i < graph.plot.graphPoints.size(); i++)
             {
-                renderLine(start, end, 1, Color.BLACK);
-            }
-            if (end != null && PLOT_RED_DOTS)
-            {
-                //GdxUtil.renderFilledRectangle(shapeRenderer, camera, end.x, end.y, Color.RED, 4);
-            }
-            if (blueDot != null && PLOT_BLUE_DOTS)
-            {
-                //GdxUtil.renderFilledRectangle(shapeRenderer, camera, blueDot.x, blueDot.y, Color.BLUE, 4);
-            }
-            start = end;
-        }
+                end = graph.plot.screenPoints.get(i);
+                Vector2 blueDot = graph.plot.blueDotScreenPosition.get(i);
 
-        for (int i=0; i < graph.plot.pointsCountXAxisText.size(); i++)
-        {
-            String text = graph.plot.pointsCountXAxisText.get(i);
-            Vector2 position = graph.plot.pointsCountXAxisPosition.get(i);
-            renderText(text, position.x, position.y, ALIGN_CENTER, ALIGN_NO);
+                if (start != null && end != null)
+                {
+                    renderLine(start, end, 1, Color.BLACK);
+                }
+                if (end != null && Graph.PLOT_RED_DOTS)
+                {
+                    GdxUtil.renderFilledRectangle(shapeRenderer, camera, end.x, end.y, Color.RED, 4);
+                }
+                if (blueDot != null && Graph.PLOT_BLUE_DOTS)
+                {
+                    GdxUtil.renderFilledRectangle(shapeRenderer, camera, blueDot.x, blueDot.y, Color.BLUE, 4);
+                }
+                start = end;
+            }
+
+            for (int i=0; i < graph.plot.pointsCountXAxisText.size(); i++)
+            {
+                String text = graph.plot.pointsCountXAxisText.get(i);
+                Vector2 position = graph.plot.pointsCountXAxisPosition.get(i);
+                renderText(text, position.x, position.y, ALIGN_CENTER, ALIGN_NO);
+            }
         }
     }
 
@@ -402,6 +377,7 @@ public class EvalGame implements ApplicationListener
         }
         renderLogText("zoom=" + camera.zoom);
     }
+
     protected void renderLogText(String text)
     {
         renderText(text, 10, screenHeight - renderText_TextYOffset, ALIGN_NO, ALIGN_NO);
@@ -462,12 +438,13 @@ public class EvalGame implements ApplicationListener
         // - directly after create
         // - when screen is resized (orientation change, bottom control panel shown)
         // in both cases we have to pass new screen dimensions to various gdx objects
-        screenWidth = width;
+        int screenWidth = width;
         screenHeight = height;
         stage.getViewport().update(screenWidth, screenHeight, true);
 
         graph.setScreenSize(screenWidth, screenHeight);
-        graph.calculateGraph(PLOT_ALGORITHM);
+        graph.calculateAxis();
+        graph.calculatePlot(graphUpdater);
     }
 
     @Override
@@ -485,9 +462,10 @@ public class EvalGame implements ApplicationListener
     {
     }
 
-    // --------------------------------------------------
-    // render text
-    // --------------------------------------------------
+    protected class GraphUpdater extends Graph.PlotCalculatorListener
+    {
+    }
+
     protected class ExploreGraphListener extends GestureDetector.GestureAdapter
     {
         int zoomExponent;
@@ -538,7 +516,8 @@ public class EvalGame implements ApplicationListener
 
             if (changed)
             {
-                graph.calculateGraph(PLOT_ALGORITHM);
+                graph.calculateAxis();
+                graph.calculatePlot(graphUpdater);
             }
 
             return true;
@@ -616,7 +595,8 @@ public class EvalGame implements ApplicationListener
 
             if (changed)
             {
-                graph.calculateGraph(PLOT_ALGORITHM);
+                graph.calculateAxis();
+                graph.calculatePlot(graphUpdater);
             }
             return true;
         }
