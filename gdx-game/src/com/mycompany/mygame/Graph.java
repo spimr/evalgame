@@ -15,123 +15,69 @@ public class Graph
     // "x^2";
     // "sin(1/x)"
     // "x*(sin(x))^3"
-    
+
     public static final int PLOT_ALGORITHM = GraphUtil.PLOT_ALGORITHM_ADAPTIVE_STEP;
     public static final boolean PLOT_RED_DOTS = true;
     public static final boolean PLOT_BLUE_DOTS = true;
 
-    SpriteBatch batch;
-    ShapeRenderer shapeRenderer;
     OrthographicCamera camera;
 
     String expressionStatus;
 
     String expression = TEST_EXPRESSION;    
-    int screenWidth;
-    int screenHeight;
-    float xMin;
-    float xMax;
-    float xGrid;
-    float yMin;
-    float yMax;
-    float yGrid;
-
-    Vector<Vector2> yAxisLineStart = new Vector<>();
-    Vector<Vector2> yAxisLineEnd = new Vector<>();
-    Vector<Vector2> yAxisMarkStart = new Vector<>();
-    Vector<Vector2> yAxisMarkEnd = new Vector<>();
-    Vector<Vector2> xAxisLineStart = new Vector<>();
-    Vector<Vector2> xAxisLineEnd = new Vector<>();
-    Vector<Vector2> xAxisMarkStart = new Vector<>();
-    Vector<Vector2> xAxisMarkEnd = new Vector<>();
-    Vector<String> xAxisText = new Vector<>();
-    Vector<Vector2> xAxisTextPosition = new Vector<>();
-    Vector<String> yAxisText = new Vector<>();
-    Vector<Vector2> yAxisTextPosition = new Vector<>();
+    private int screenWidth;
+    private int screenHeight;
+    private float xMin;
+    private float xMax;
+    private float xGrid;
+    private float yMin;
+    private float yMax;
+    private float yGrid;
 
     Plot plot;
     PlotCalculator plotCalculator;
 
-    // --------------------------------------------------
-    // Batch, ShapeRenderer and Camera
-    // --------------------------------------------------
-    public void setGdxObjects(SpriteBatch batch,
-                              ShapeRenderer shapeRenderer,
-                              OrthographicCamera camera)
-    {
-        this.batch = batch;
-        this.shapeRenderer = shapeRenderer;
-        this.camera = camera;
-    }
-
-    public void setScreenSize(int screenWidth, int screenHeight)
+    public Graph(int screenWidth, int screenHeight)
     {
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
-
-        batch.getProjectionMatrix().setToOrtho2D(0, 0, screenWidth, screenHeight);
-
-        camera.viewportWidth = screenWidth;
-        camera.viewportHeight = screenHeight;
-        camera.position.set(camera.viewportWidth / 2f, camera.viewportHeight / 2f, 0);
-        camera.update();
     }
 
-    protected void setCameraZoom(float zoom)
+    public void setGdxObjects(OrthographicCamera camera)
     {
-        if (zoom < 0.01f)
-        {
-            zoom = 0.01f;
-        }
-        if (zoom > 10)
-        {
-            zoom = 1;
-        }
-        camera.zoom = zoom;
-        camera.update();
+        this.camera = camera;
     }
-
-    boolean batchStarted = false;
-    ShapeRenderer.ShapeType shapeType;
-    float lineWidth;
-
-    protected void setSettings(ShapeRenderer.ShapeType shapeType, float lineWidth)
+    
+    public float getXMin()
     {
-        if (shapeType == null)
-        {
-            shapeType = this.shapeType;
-        }
-        if (this.shapeType != shapeType || this.lineWidth != lineWidth)
-        {
-            if (batchStarted)
-            {
-                endBatch();
-            }
-            Gdx.gl.glLineWidth(lineWidth);
-            shapeRenderer.setProjectionMatrix(camera.combined);
-            shapeRenderer.begin(shapeType);
-            batch.begin();
-            batchStarted = true;
-            this.shapeType = shapeType;
-            this.lineWidth = lineWidth;
-        }
+        return xMin;
     }
 
-    protected void startBatch()
+    public float getXMax()
     {
-        shapeType = null;
-        lineWidth = 0;
-        batchStarted = false;
-        setSettings(ShapeRenderer.ShapeType.Line, 1f);
+        return xMax;
     }
 
-    protected void endBatch()
+    public float getXGrid()
     {
-        batch.end();
-        shapeRenderer.end();
-        batchStarted = false;
+        return xGrid;
     }
 
+    public float getYMin()
+    {
+        return yMin;
+    }
+
+    public float getYMax()
+    {
+        return yMax;
+    }
+
+    public float getYGrid()
+    {
+        return yGrid;
+    }
+    
     // --------------------------------------------------
     // Screen to Graph coordinates conversion
     // --------------------------------------------------
@@ -224,71 +170,7 @@ public class Graph
             yGrid = 1f;
         }
         camera.position.set(camera.viewportWidth / 2f, camera.viewportHeight / 2f, 0);
-        setCameraZoom(1f);
-    }
-
-    public void calculateAxis()
-    {
-        yAxisLineStart.clear();
-        yAxisLineEnd.clear();
-        yAxisMarkStart.clear();
-        yAxisMarkEnd.clear();
-        xAxisLineStart.clear();
-        xAxisLineEnd.clear();
-        xAxisMarkStart.clear();
-        xAxisMarkEnd.clear();
-        xAxisText.clear();
-        xAxisTextPosition.clear();
-        yAxisText.clear();
-        yAxisTextPosition.clear();
-
-        for (float x = xMin + xGrid; x < xMax; x += xGrid)
-        { 
-            Vector2 start= new Vector2();
-            Vector2 end = new Vector2();
-            graph2Screen(start, x, yMin);
-            graph2Screen(end, x, yMax);
-            yAxisLineStart.add(start);
-            yAxisLineEnd.add(end);
-
-            start = new Vector2();
-            end = new Vector2();
-            graph2Screen(start, x, -5 * (yMax - yMin) / screenHeight * camera.zoom);
-            graph2Screen(end, x, 5 * (yMax - yMin) / screenHeight * camera.zoom);
-            yAxisMarkStart.add(start);
-            yAxisMarkEnd.add(end);
-
-            String label = NumberUtil.toGridString(x, xGrid);
-            xAxisText.add(label);
-            xAxisTextPosition.add(getXAxisTextPosition(x, 0));
-        }
-
-        for (float y = yMin + yGrid; y < yMax; y += yGrid)
-        {
-            Vector2 start= new Vector2();
-            Vector2 end = new Vector2();
-
-            graph2Screen(start, xMin, y);
-            graph2Screen(end, xMax, y);
-            xAxisLineStart.add(start);
-            xAxisLineEnd.add(end);
-
-            if (NumberUtil.isZero(y))
-            {
-                continue;
-            }
-
-            start = new Vector2();
-            end = new Vector2();
-            graph2Screen(start, -5 * (xMax - xMin) / screenWidth * camera.zoom, y);
-            graph2Screen(end, 5 * (xMax - xMin) / screenWidth * camera.zoom, y);
-            xAxisMarkStart.add(start);
-            xAxisMarkEnd.add(end);
-
-            String label = NumberUtil.toGridString(y, yGrid);
-            yAxisText.add(label);
-            yAxisTextPosition.add(getYAxisTextPosition(y,0));
-        }
+        camera.zoom = 1f;
     }
 
     private Vector2 getXAxisTextPosition(float graphX, int line)
@@ -313,14 +195,20 @@ public class Graph
         return result;
     }
 
-    public void calculatePlot(PlotCalculatorListener listener)
+    public void calculatePlot(float xMin, float xMax, float xGrid, float yMin, float yMax, float yGrid, PlotCalculatorListener listener)
     {
-        if (plotCalculator!=null)
+        this.xMin = xMin;
+        this.xMax = xMax;
+        this.xGrid = xGrid;
+        this.yMin = yMin;
+        this.yMax = yMax;
+        this.yGrid = yGrid;
+        if (plotCalculator != null)
         {
             plotCalculator.setAborted();
         }
         plotCalculator = new PlotCalculator(listener);
-        new Thread (plotCalculator).start();
+        new Thread(plotCalculator).start();
     }
 
     public static class PlotCalculatorListener
@@ -328,55 +216,55 @@ public class Graph
         void finished()
         {
         }
-        
+
         void aborted()
         {
         }
     }
-    
+
     public class PlotCalculator implements Runnable
     {
         PlotCalculatorListener listener;
         protected String progressText;
         protected boolean aborted;
-        
+
         public PlotCalculator(PlotCalculatorListener listener)
         {
-            this.listener=listener;
+            this.listener = listener;
         }
-        
+
         public void run()
         {
             calculate();
         }
-        
-        public void setAborted ()
+
+        public void setAborted()
         {
             this.aborted = true;
         }
-        
-        public boolean isAborted ()
+
+        public boolean isAborted()
         {
             return aborted;
         }
-        
-        public void setProgressText (String progressText)
+
+        public void setProgressText(String progressText)
         {
-            this.progressText=progressText;
+            this.progressText = progressText;
         }
-        
+
         public String getProgressText()
         {
             return null;
         }
-        
+
         public void calculate()
         {
-            plot = GraphUtil.plotGraph(Graph.this, PLOT_ALGORITHM);
+            Plot plot = GraphUtil.plotGraph(Graph.this, PLOT_ALGORITHM);
 
             plot.log.add("screenWidth=" + screenWidth);
             plot.log.add("screenHeight=" + screenHeight);
-            
+
             // infer rendering values in the plot
             long gridPointsCount =0;
             float gridPointsToX = graphX2UpperSnapX(xMin + xGrid);
@@ -413,11 +301,12 @@ public class Graph
             }
             plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
             plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
+            Graph.this.plot=plot;
         }
-        }
-    
+    }
+
     public boolean isCalculating()
     {
-        return plotCalculator!=null;
+        return plotCalculator != null;
     }
 }

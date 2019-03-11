@@ -45,26 +45,15 @@ public class GdxUtil
         return result;
     }
 
-    public static Drawable getFilledRectangle(float width, float height, Color backgroundColor)
-    {
-        Drawable result;
-        Pixmap labelColor = new Pixmap((int)width, (int)height, Pixmap.Format.RGB888);
-        labelColor.setColor(backgroundColor);
-        labelColor.fill();
-        result = new Image(new Texture(labelColor)).getDrawable();
-        return result;
-    }
-
-    public static void renderFilledRectangle(ShapeRenderer shapeRenderer, OrthographicCamera camera, float x, float y, Color color, int boxSize)
+    public static void renderFilledRectUsingLines(ShapeRenderer shapeRenderer, OrthographicCamera camera, float x, float y, float width, float height, Color color)
     {
         shapeRenderer.setColor(color);
-        int boxHalfSize = boxSize / 2;
-        for (int i=0; i <= boxSize; i++)
+        for (float i=0; i <= height; i=i+camera.zoom)
         {
-            float pI=i * camera.zoom;
-            float pBoxHalfSize = boxHalfSize * camera.zoom;
-            shapeRenderer.line(x - pBoxHalfSize, y + pI, x + pBoxHalfSize, y + pI);
+            shapeRenderer.line(x, y + i, x + width, y + i);
         }
     }    
+
+    
 
 }

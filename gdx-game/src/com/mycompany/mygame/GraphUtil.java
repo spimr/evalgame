@@ -37,7 +37,9 @@ public class GraphUtil
         float step = graphPixel.x * 5; // evaluate every 5th pixel
         result.log.add("step=" + step);
 
-        for (float x = graph.xMin; x < graph.xMax; x += step)
+        float xMin = graph.getXMin();
+        float xMax = graph.getXMax();
+        for (float x = xMin; x < xMax; x += step)
         {
             Vector2 point = null;
             float y = EvalUtil.eval(graph.expression, x);
@@ -65,7 +67,9 @@ public class GraphUtil
         float yTolerance = graphPixel.y;
         int maxDepth = 5;
 
-        plotAlgorithmAdaptiveStep(graph, graph.xMin, graph.xMax, xStep, xTolerance, yTolerance, maxDepth, result);
+        float xMin = graph.getXMin();
+        float xMax = graph.getXMax();
+        plotAlgorithmAdaptiveStep(graph, xMin, xMax, xStep, xTolerance, yTolerance, maxDepth, result);
         return result;
     }
 
