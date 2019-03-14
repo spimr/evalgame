@@ -10,7 +10,7 @@ import java.util.Vector;
 
 public class Graph
 {
-    public static final String TEST_EXPRESSION = "sin(1/x)";
+    public static final String TEST_EXPRESSION = "";
     // "x";
     // "x^2";
     // "sin(1/x)"
@@ -24,7 +24,7 @@ public class Graph
 
     String expressionStatus;
 
-    String expression = TEST_EXPRESSION;    
+    String expression="";    
     private int screenWidth;
     private int screenHeight;
     private float xMin;
@@ -47,7 +47,7 @@ public class Graph
     {
         this.camera = camera;
     }
-    
+
     public float getXMin()
     {
         return xMin;
@@ -77,7 +77,7 @@ public class Graph
     {
         return yGrid;
     }
-    
+
     // --------------------------------------------------
     // Screen to Graph coordinates conversion
     // --------------------------------------------------
@@ -160,6 +160,15 @@ public class Graph
             yMax = 0.3f;
             yGrid = 0.1f;
         }
+        else if (true)
+        {
+            xMin = -0.5f;
+            xMax = 0.5f;
+            xGrid = 0.1f;
+            yMin = -1.5f;
+            yMax = 1.5f;
+            yGrid = 0.1f;
+        }
         else
         {
             xMin = -5f;
@@ -184,31 +193,23 @@ public class Graph
         return result;
     }
 
-    protected Vector2 getYAxisTextPosition(float graphY, float line)
-    {
-        Vector2 result = new Vector2();
-        Vector3 vector = new Vector3();
-        graph2Screen(result, 0, graphY);
-        vector.set(result, 0);
-        camera.project(vector);
-        result.set(vector.x - 10, vector.y - line * 20);
-        return result;
-    }
-
     public void calculatePlot(float xMin, float xMax, float xGrid, float yMin, float yMax, float yGrid, PlotCalculatorListener listener)
     {
-        this.xMin = xMin;
-        this.xMax = xMax;
-        this.xGrid = xGrid;
-        this.yMin = yMin;
-        this.yMax = yMax;
-        this.yGrid = yGrid;
         if (plotCalculator != null)
         {
             plotCalculator.setAborted();
         }
-        plotCalculator = new PlotCalculator(listener);
-        new Thread(plotCalculator).start();
+        if (expression != null && expression.length() > 0)
+        {
+            this.xMin = xMin;
+            this.xMax = xMax;
+            this.xGrid = xGrid;
+            this.yMin = yMin;
+            this.yMax = yMax;
+            this.yGrid = yGrid;
+            plotCalculator = new PlotCalculator(listener);
+            new Thread(plotCalculator).start();
+        }
     }
 
     public static class PlotCalculatorListener
@@ -262,9 +263,6 @@ public class Graph
         {
             Plot plot = GraphUtil.plotGraph(Graph.this, PLOT_ALGORITHM);
 
-            plot.log.add("screenWidth=" + screenWidth);
-            plot.log.add("screenHeight=" + screenHeight);
-
             // infer rendering values in the plot
             long gridPointsCount =0;
             float gridPointsToX = graphX2UpperSnapX(xMin + xGrid);
@@ -301,7 +299,7 @@ public class Graph
             }
             plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
             plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
-            Graph.this.plot=plot;
+            Graph.this.plot = plot;
         }
     }
 

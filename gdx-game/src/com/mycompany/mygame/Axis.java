@@ -10,10 +10,6 @@ import java.util.Vector;
 
 public class Axis
 {
-    OrthographicCamera camera;
-
-    int screenWidth;
-    int screenHeight;
     float xMin;
     float xMax;
     float xGrid;
@@ -21,38 +17,90 @@ public class Axis
     float yMax;
     float yGrid;
 
-    Vector<Vector2> yAxisLineStart = new Vector<>();
-    Vector<Vector2> yAxisLineEnd = new Vector<>();
-    Vector<Vector2> yAxisMarkStart = new Vector<>();
-    Vector<Vector2> yAxisMarkEnd = new Vector<>();
-    Vector<Vector2> xAxisLineStart = new Vector<>();
-    Vector<Vector2> xAxisLineEnd = new Vector<>();
-    Vector<Vector2> xAxisMarkStart = new Vector<>();
-    Vector<Vector2> xAxisMarkEnd = new Vector<>();
-    Vector<String> xAxisText = new Vector<>();
-    Vector<Vector2> xAxisTextPosition = new Vector<>();
-    Vector<String> yAxisText = new Vector<>();
-    Vector<Vector2> yAxisTextPosition = new Vector<>();
+    ArrayList<String> calculationLog = new ArrayList<>();
 
-    public Axis(OrthographicCamera camera)
+    Vector2List yAxisLineStart = new Vector2List();
+    Vector2List yAxisLineEnd = new Vector2List();
+    Vector2List yAxisMarkStart = new Vector2List();
+    Vector2List yAxisMarkEnd = new Vector2List();
+    int yAxisMainIndex;
+
+    Vector2List xAxisLineStart = new Vector2List();
+    Vector2List xAxisLineEnd = new Vector2List();
+    Vector2List xAxisMarkStart = new Vector2List();
+    Vector2List xAxisMarkEnd = new Vector2List();
+    int xAxisMainIndex;
+
+    ArrayList<String> xAxisText = new ArrayList<>();
+    Vector2List xAxisTextPosition = new Vector2List();
+    int xAxisTextAlign;
+    ArrayList<String> yAxisText = new ArrayList<>();
+    Vector2List yAxisTextPosition = new Vector2List();
+    int yAxisTextAlign;
+
+    public Axis()
     {
-        this.camera = camera;
+        xMin = -5f;
+        xMax = 5f;
+        xGrid = 0.1f;
+        yMin = -5;
+        yMax = 5f;
+        yGrid = 1;
     }
 
-    public void setScreenSize(int screenWidth, int screenHeight)
+    public void log()
     {
-        this.screenWidth = screenWidth;
-        this.screenHeight = screenHeight;
+        GdxUtil.log("Axis");
+        GdxUtil.log("x=<" + NumberUtil.toString(xMin, 3) + "," + NumberUtil.toString(xMax, 3) + "> grid " + NumberUtil.toString(xGrid, 3));
+        GdxUtil.log("y=<" + NumberUtil.toString(yMin, 3) + "," + NumberUtil.toString(yMax, 3) + "> grid " + NumberUtil.toString(yGrid, 3));
+        for (String logText:calculationLog)
+        {
+            GdxUtil.log(logText);
+        }
+        GdxUtil.log("");
     }
 
-    public void setWorldSize(float xMin, float xMax, float xGrid, float yMin, float yMax, float yGrid)
+    public boolean setWorldSize(float xMin, float xMax, float xGrid, float yMin, float yMax, float yGrid)
     {
-        this.xMin = xMin;
-        this.xMax = xMax;
-        this.xGrid = xGrid;
-        this.yMin = yMin;
-        this.yMax = yMax;
-        this.yGrid = yGrid;
+        boolean result=false;
+        if (!NumberUtil.equals(this.xMin, xMin) && isReasonable(xMin, xMax, xGrid))
+        {
+            result = true;
+            this.xMin = xMin;
+        }
+        if (!NumberUtil.equals(this.xMax, xMax) && isReasonable(xMin, xMax, xGrid))
+        {
+            result = true;
+            this.xMax = xMax;
+        }
+        if (!NumberUtil.equals(this.xGrid, xGrid) && isReasonable(xMin, xMax, xGrid))
+        {
+            result = true;
+            this.xGrid = xGrid;
+        }
+        if (!NumberUtil.equals(this.yMin, yMin) && isReasonable(yMin, yMax, yGrid))
+        {
+            result = true;
+            this.yMin = yMin;
+        }
+        if (!NumberUtil.equals(this.yMax, yMax) && isReasonable(yMin, yMax, yGrid))
+        {
+            result = true;
+            this.yMax = yMax;
+        }
+        if (!NumberUtil.equals(this.yGrid, yGrid) && isReasonable(yMin, yMax, yGrid))
+        {
+            result = true;
+            this.yGrid = yGrid;
+        }
+        return result;
+    }
+
+    private boolean isReasonable(float min, float max, float grid)
+    {
+        return NumberUtil.isReasonable(min) && //
+            NumberUtil.isReasonable(max) && //
+            NumberUtil.isReasonable(grid);
     }
 
     // --------------------------------------------------
@@ -62,8 +110,8 @@ public class Axis
     {
         float graphWidth = xMax - xMin;
         float graphHeight = yMax - yMin;
-        float screenX = (graphX - xMin) * screenWidth / graphWidth;
-        float screenY = (graphY - yMin) * screenHeight / graphHeight;
+        float screenX = (graphX - xMin) * GdxUtil.getScreenWidth() / graphWidth;
+        float screenY = (graphY - yMin) * GdxUtil.getScreenHeight() / graphHeight;
         screenPoint.set(screenX, screenY);
     }
 
@@ -71,8 +119,8 @@ public class Axis
     {
         float graphWidth = xMax - xMin;
         float graphHeight = yMax - yMin;
-        float graphX = screenX * graphWidth / screenWidth;
-        float graphY = screenY * graphHeight / screenHeight;
+        float graphX = screenX * graphWidth / GdxUtil.getScreenWidth();
+        float graphY = screenY * graphHeight / GdxUtil.getScreenHeight();
         if (snapToGrid)
         {
             graphX = graphX2SnapX(graphX);
@@ -93,12 +141,22 @@ public class Axis
 
     protected float graphX2UpperSnapX(float graphX)
     {
-        return xGrid * (int) Math.ceil(graphX / xGrid);
+        return xGrid * (int) Math.ceil((graphX - NumberUtil.SMALLEST_FLOAT) / xGrid);
     }
 
     protected float graphY2UpperSnapY(float graphY)
     {
-        return yGrid * (int) Math.ceil(graphY / yGrid);
+        return yGrid * (int) Math.ceil((graphY - NumberUtil.SMALLEST_FLOAT) / yGrid);
+    }
+
+    protected float graphX2LowerSnapX(float graphX)
+    {
+        return xGrid * (int) Math.floor((graphX + NumberUtil.SMALLEST_FLOAT) / xGrid);
+    }
+
+    protected float graphY2LowerSnapY(float graphY)
+    {
+        return yGrid * (int) Math.floor((graphY + NumberUtil.SMALLEST_FLOAT) / yGrid);
     }
 
     protected Vector2 getGraphPixel()
@@ -110,87 +168,159 @@ public class Axis
 
     public void calculateAxis()
     {
+        // clear previous calculation
+        calculationLog.clear();
+
         yAxisLineStart.clear();
         yAxisLineEnd.clear();
         yAxisMarkStart.clear();
         yAxisMarkEnd.clear();
+        yAxisMainIndex = -1;
+
         xAxisLineStart.clear();
         xAxisLineEnd.clear();
         xAxisMarkStart.clear();
         xAxisMarkEnd.clear();
+        xAxisMainIndex = -1;
+
         xAxisText.clear();
         xAxisTextPosition.clear();
         yAxisText.clear();
         yAxisTextPosition.clear();
 
-        for (float x = xMin + xGrid; x < xMax; x += xGrid)
+        // start and end for axis
+        float xStart = graphX2UpperSnapX(xMin);
+        float xEnd = graphX2LowerSnapX(xMax)+xGrid/2;
+        
+        float yStart = graphY2UpperSnapY(yMin);
+        float yEnd = graphY2LowerSnapY(yMax)+yGrid/2;
+        
+        // mark coordinates
+        boolean doXAxisMarks = yStart <= 0 && 0 <= yEnd;
+        boolean doYAxisMarks = xStart <= 0 && 0 <= xEnd;
+        float xForXAxisMark = (xMax - xMin) / GdxUtil.getScreenWidth() * GdxUtil.getCameraZoom();
+        float yForYAxisMark = (yMax - yMin) / GdxUtil.getScreenHeight() * GdxUtil.getCameraZoom();
+
+        // label coordinates and align
+        float yForXAxisText =0;
+        xAxisTextAlign = GdxUtil.HALIGN_CENTER | GdxUtil.VALIGN_BOTTOM;
+        if (yForXAxisText < yMin + yGrid/2)
+        {
+            yForXAxisText = yMin;
+            xAxisTextAlign = GdxUtil.HALIGN_CENTER | GdxUtil.VALIGN_TOP;
+        }
+        if (yMax < yForXAxisText)
+        {
+            yForXAxisText = yMax;
+        }
+
+        float xForYAxisText =0;
+        yAxisTextAlign = GdxUtil.HALIGN_LEFT | GdxUtil.VALIGN_CENTER;
+        if (xForYAxisText < xMin + xGrid/2)
+        {
+            xForYAxisText = xMin;
+            yAxisTextAlign = GdxUtil.HALIGN_RIGHT | GdxUtil.VALIGN_CENTER;
+        }
+        if (xMax < xForYAxisText)
+        {
+            xForYAxisText = xMax;
+        }
+
+        // y axis
+        for (float x = xStart; x <= xEnd; x += xGrid)
         { 
-            Vector2 start= new Vector2();
-            Vector2 end = new Vector2();
+            if (NumberUtil.equals(x, 0f))
+            {
+                yAxisMainIndex = yAxisLineStart.size();
+            }
+            Vector2 start = yAxisLineStart.newElement();
+            Vector2 end = yAxisLineEnd.newElement();
             graph2Screen(start, x, yMin);
             graph2Screen(end, x, yMax);
             yAxisLineStart.add(start);
             yAxisLineEnd.add(end);
 
-            start = new Vector2();
-            end = new Vector2();
-            graph2Screen(start, x, -5 * (yMax - yMin) / screenHeight * camera.zoom);
-            graph2Screen(end, x, 5 * (yMax - yMin) / screenHeight * camera.zoom);
-            yAxisMarkStart.add(start);
-            yAxisMarkEnd.add(end);
+            if (doXAxisMarks)
+            {
+                start = yAxisMarkStart.newElement();
+                end = yAxisMarkStart.newElement();
+                graph2Screen(start, x, -5 * yForYAxisMark);
+                graph2Screen(end, x, 5 * yForYAxisMark);
+                yAxisMarkStart.add(start);
+                yAxisMarkEnd.add(end);
+            }
 
             String label = NumberUtil.toGridString(x, xGrid);
             xAxisText.add(label);
-            xAxisTextPosition.add(getXAxisTextPosition(x, 0));
+            xAxisTextPosition.add(getXAxisTextPosition(xAxisTextPosition.newElement(), x, yForXAxisText, 0));
         }
 
-        for (float y = yMin + yGrid; y < yMax; y += yGrid)
+        // x axis
+        for (float y = yStart; y <= yEnd; y += yGrid)
         {
-            Vector2 start= new Vector2();
-            Vector2 end = new Vector2();
+            if (NumberUtil.equals(y, 0f))
+            {
+                xAxisMainIndex = xAxisLineStart.size();
+            }
 
+            Vector2 start= xAxisLineStart.newElement();
+            Vector2 end = xAxisLineEnd.newElement();
             graph2Screen(start, xMin, y);
             graph2Screen(end, xMax, y);
             xAxisLineStart.add(start);
             xAxisLineEnd.add(end);
 
-            if (NumberUtil.isZero(y))
+            if (NumberUtil.equals(y, 0f) && NumberUtil.equals(xForYAxisText, 0f))
             {
                 continue;
             }
 
-            start = new Vector2();
-            end = new Vector2();
-            graph2Screen(start, -5 * (xMax - xMin) / screenWidth * camera.zoom, y);
-            graph2Screen(end, 5 * (xMax - xMin) / screenWidth * camera.zoom, y);
-            xAxisMarkStart.add(start);
-            xAxisMarkEnd.add(end);
-
+            if (doYAxisMarks)
+            {
+                start = xAxisMarkStart.newElement();
+                end = xAxisMarkEnd.newElement();
+                graph2Screen(start, -5 * xForXAxisMark, y);
+                graph2Screen(end, 5 * xForXAxisMark, y);
+                xAxisMarkStart.add(start);
+                xAxisMarkEnd.add(end);
+            }
             String label = NumberUtil.toGridString(y, yGrid);
             yAxisText.add(label);
-            yAxisTextPosition.add(getYAxisTextPosition(y, 0));
+            yAxisTextPosition.add(getYAxisTextPosition(yAxisTextPosition.newElement(), xForYAxisText, y, 0));
+        }
+        
+        // realign the Left aligned text to right aligned so that
+        // decimal comma matches vertically
+        if ((yAxisTextAlign & GdxUtil.HALIGN_RIGHT) == GdxUtil.HALIGN_RIGHT)
+        {
+            float textSizeMaxWidth = 0f;
+            for (int i=0; i < yAxisText.size(); i++)
+            {
+                Vector2 textSize = GdxUtil.getRenderedTextSize(yAxisText.get(i));
+                textSizeMaxWidth = Math.max(textSize.x, textSizeMaxWidth);                   
+            }
+            yAxisTextAlign = yAxisTextAlign + GdxUtil.HALIGN_LEFT - GdxUtil.HALIGN_RIGHT;
+            textSizeMaxWidth += 15f;
+            for (int i=0; i < yAxisText.size(); i++)
+            {
+                yAxisTextPosition.get(i).x += textSizeMaxWidth;
+            }
         }
     }
 
-    private Vector2 getXAxisTextPosition(float graphX, int line)
+    private Vector2 getXAxisTextPosition(Vector2 result, float graphX, float graphY, int line)
     {
-        Vector2 result = new Vector2();
-        Vector3 vector = new Vector3();
-        graph2Screen(result, graphX, 0);
-        vector.set(result, 0);
-        camera.project(vector);
-        result.set(vector.x, vector.y - 10 - line * 20);
+        graph2Screen(result, graphX, graphY);
+        GdxUtil.project(result);
+        result.set(result.x, result.y + 5 - line * 20);
         return result;
     }
 
-    protected Vector2 getYAxisTextPosition(float graphY, float line)
+    protected Vector2 getYAxisTextPosition(Vector2 result, float graphX, float graphY, float line)
     {
-        Vector2 result = new Vector2();
-        Vector3 vector = new Vector3();
-        graph2Screen(result, 0, graphY);
-        vector.set(result, 0);
-        camera.project(vector);
-        result.set(vector.x - 10, vector.y - line * 20);
+        graph2Screen(result, graphX, graphY);
+        GdxUtil.project(result);
+        result.set(result.x - 7, result.y - line * 20);
         return result;
     }
 

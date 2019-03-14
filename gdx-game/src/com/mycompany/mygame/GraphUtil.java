@@ -2,6 +2,8 @@ package com.mycompany.mygame;
 
 import com.badlogic.gdx.math.*;
 import java.util.*;
+import org.apache.http.impl.client.*;
+import android.sax.*;
 
 public class GraphUtil
 {
@@ -12,6 +14,7 @@ public class GraphUtil
                                  int algorithm)
     {
         Plot result;
+        long startTime = System.currentTimeMillis();
         if (algorithm == PLOT_ALGORITHM_STATIC_STEP)
         {
             result = plotAlgorithmStaticStep(graph);
@@ -25,6 +28,9 @@ public class GraphUtil
             result = new Plot();
             result.log.add("Unknown Algorithm");
         }
+        long endTime = System.currentTimeMillis();
+        result.log.add("took=" + ((endTime-startTime)) + "ms.");
+        result.log.add("");
         return result;
     }
 
@@ -32,8 +38,9 @@ public class GraphUtil
     {
         Plot result = new Plot();
         result.log.add("Static Plot Algorithm");
+        result.log.add("f(x)=" + graph.expression);
+        result.log.add("started=" + GdxUtil.getTime());
         Vector2 graphPixel = graph.getGraphPixel();
-        result.log.add("graphPixel=[" + NumberUtil.toString(graphPixel.x) + "," + NumberUtil.toString(graphPixel.y) + "]");
         float step = graphPixel.x * 5; // evaluate every 5th pixel
         result.log.add("step=" + step);
 
@@ -60,8 +67,9 @@ public class GraphUtil
     {
         Plot result = new Plot();
         result.log.add("Adaptive Plot Algorithm");
+        result.log.add("f(x)=" + graph.expression);
+        result.log.add("started=" + GdxUtil.getTime());
         Vector2 graphPixel = graph.getGraphPixel();
-        result.log.add("graphPixel=[" + NumberUtil.toString(graphPixel.x) + "," + NumberUtil.toString(graphPixel.y) + "]");
         float xStep = graphPixel.x * 1; 
         float xTolerance = graphPixel.x;
         float yTolerance = graphPixel.y;

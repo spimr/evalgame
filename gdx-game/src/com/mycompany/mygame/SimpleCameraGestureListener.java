@@ -10,27 +10,23 @@ import com.badlogic.gdx.graphics.glutils.*;
 import java.util.*;
 import com.badlogic.gdx.input.*;
 
-public class CameraDrivenGestureListener extends GestureDetector.GestureAdapter
+public class SimpleCameraGestureListener extends GestureDetector.GestureAdapter
 {
     Axis axis;
-    Graph graph;
-    OrthographicCamera camera;
     
     float lastZoom=-1;
     float lastInitialDistance=-1;
     
-    public CameraDrivenGestureListener (Axis axis, Graph graph)
+    public SimpleCameraGestureListener (Axis axis)
     {
         this.axis=axis;
-        this.graph=graph;
-        this.camera=graph.camera;
     }
     
     @Override
     public boolean pan(float x, float y, float deltaX, float deltaY)
     {
-        camera.translate(-deltaX * camera.zoom, deltaY * camera.zoom);
-        camera.update();
+        float zoom=GdxUtil.getCameraZoom();
+        GdxUtil.setCameraTranslation(-deltaX * zoom, deltaY * zoom);
         axis.calculateAxis();
         return false;
     }
@@ -38,12 +34,12 @@ public class CameraDrivenGestureListener extends GestureDetector.GestureAdapter
     @Override
     public boolean zoom(float initialDistance, float distance)
     {
+        float zoom=GdxUtil.getCameraZoom();
         if (lastInitialDistance != initialDistance)
         {
             lastInitialDistance = initialDistance;
-            lastZoom = camera.zoom;
+            lastZoom = GdxUtil.getCameraZoom();
         }
-        float zoom=camera.zoom;
         zoom = lastZoom / (distance / initialDistance);
         if (zoom < 0.01f)
         {
@@ -53,8 +49,7 @@ public class CameraDrivenGestureListener extends GestureDetector.GestureAdapter
         {
             zoom = 100;
         }
-        camera.zoom = zoom;
-        camera.update();
+        GdxUtil.setCameraZoom(zoom);
         axis.calculateAxis();
         return false;
     }
