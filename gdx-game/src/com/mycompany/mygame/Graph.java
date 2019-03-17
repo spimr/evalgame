@@ -10,7 +10,7 @@ import java.util.Vector;
 
 public class Graph
 {
-    public static final String TEST_EXPRESSION = "";
+    public static final String TEST_EXPRESSION = "sin(x)";
     // "x";
     // "x^2";
     // "sin(1/x)"
@@ -20,6 +20,7 @@ public class Graph
     public static final boolean PLOT_RED_DOTS = true;
     public static final boolean PLOT_BLUE_DOTS = true;
 
+    public static final long PLOT_CALCULATION_DUMMY_DELAY_MS=0;
     OrthographicCamera camera;
 
     String expressionStatus;
@@ -36,6 +37,7 @@ public class Graph
 
     Plot plot;
     PlotCalculator plotCalculator;
+    boolean plotObsolete;
 
     public Graph(int screenWidth, int screenHeight)
     {
@@ -160,15 +162,6 @@ public class Graph
             yMax = 0.3f;
             yGrid = 0.1f;
         }
-        else if (true)
-        {
-            xMin = -0.5f;
-            xMax = 0.5f;
-            xGrid = 0.1f;
-            yMin = -1.5f;
-            yMax = 1.5f;
-            yGrid = 0.1f;
-        }
         else
         {
             xMin = -5f;
@@ -193,8 +186,22 @@ public class Graph
         return result;
     }
 
+    public void setPlotObsolete(boolean plotObsolete)
+    {
+        this.plotObsolete = plotObsolete;
+    }
+
+    public boolean isPlotObsolete()
+    {
+        return plotObsolete;
+    }
+
     public void calculatePlot(float xMin, float xMax, float xGrid, float yMin, float yMax, float yGrid, PlotCalculatorListener listener)
     {
+        if (plot!=null)
+        {
+            setPlotObsolete(true);
+        }
         if (plotCalculator != null)
         {
             plotCalculator.setAborted();
@@ -210,16 +217,60 @@ public class Graph
             plotCalculator = new PlotCalculator(listener);
             new Thread(plotCalculator).start();
         }
+        else
+        {
+            plot=null;
+            setPlotObsolete(false);
+        }
     }
 
-    public static class PlotCalculatorListener
+    public static abstract class PlotCalculatorListener
     {
-        void finished()
+        public abstract void started();
+        public abstract void progress (String progressText);
+        public abstract void finished();
+        public abstract void aborted();
+        
+        private void invokeStarted ()
         {
+            GdxUtil.runInGdxLater(new Runnable()
+                {
+                    public void run()
+                    {
+                        started();
+                    }
+                });
         }
-
-        void aborted()
+        
+        private void invokeProgress (final String progressText)
         {
+            GdxUtil.runInGdxLater(new Runnable()
+                {
+                    public void run()
+                    {
+                        progress(progressText);
+                    }
+                });
+        }
+        private void invokeFinished ()
+        {
+            GdxUtil.runInGdxLater(new Runnable()
+                {
+                    public void run()
+                    {
+                        finished();
+                    }
+                });
+        }
+        private void invokeAborted ()
+        {
+            GdxUtil.runInGdxLater(new Runnable()
+                {
+                    public void run()
+                    {
+                        aborted();
+                    }
+                });
         }
     }
 
@@ -236,31 +287,17 @@ public class Graph
 
         public void run()
         {
-            calculate();
-        }
-
-        public void setAborted()
-        {
-            this.aborted = true;
-        }
-
-        public boolean isAborted()
-        {
-            return aborted;
-        }
-
-        public void setProgressText(String progressText)
-        {
-            this.progressText = progressText;
-        }
-
-        public String getProgressText()
-        {
-            return null;
-        }
-
-        public void calculate()
-        {
+            listener.invokeStarted();
+            if (PLOT_CALCULATION_DUMMY_DELAY_MS > 0)
+            {
+                try
+                {
+                    Thread.sleep(PLOT_CALCULATION_DUMMY_DELAY_MS);
+                }
+                catch (Exception ex)
+                {
+                }
+            }
             Plot plot = GraphUtil.plotGraph(Graph.this, PLOT_ALGORITHM);
 
             // infer rendering values in the plot
@@ -300,11 +337,20 @@ public class Graph
             plot.pointsCountXAxisText.add(Long.toString(gridPointsCount));
             plot.pointsCountXAxisPosition.add(getXAxisTextPosition(gridPointsToX - xGrid / 2, 1));
             Graph.this.plot = plot;
+            Graph.this.plotObsolete = false;
+            listener.invokeFinished();
         }
-    }
 
-    public boolean isCalculating()
-    {
-        return plotCalculator != null;
+        public void setAborted()
+        {
+            this.aborted = true;
+            listener.invokeAborted();
+        }
+
+        public void setProgressText(String progressText)
+        {
+            this.progressText = progressText;
+            listener.invokeProgress(progressText);
+        }
     }
 }

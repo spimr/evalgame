@@ -60,7 +60,12 @@ public class Axis
         GdxUtil.log("");
     }
 
-    public boolean setWorldSize(float xMin, float xMax, float xGrid, float yMin, float yMax, float yGrid)
+    public boolean setWorldSize(float xMin, 
+                                float xMax, 
+                                float xGrid, 
+                                float yMin, 
+                                float yMax, 
+                                float yGrid)
     {
         boolean result=false;
         if (!NumberUtil.equals(this.xMin, xMin) && isReasonable(xMin, xMax, xGrid))
@@ -190,11 +195,11 @@ public class Axis
 
         // start and end for axis
         float xStart = graphX2UpperSnapX(xMin);
-        float xEnd = graphX2LowerSnapX(xMax)+xGrid/2;
-        
+        float xEnd = graphX2LowerSnapX(xMax) + xGrid / 2;
+
         float yStart = graphY2UpperSnapY(yMin);
-        float yEnd = graphY2LowerSnapY(yMax)+yGrid/2;
-        
+        float yEnd = graphY2LowerSnapY(yMax) + yGrid / 2;
+
         // mark coordinates
         boolean doXAxisMarks = yStart <= 0 && 0 <= yEnd;
         boolean doYAxisMarks = xStart <= 0 && 0 <= xEnd;
@@ -204,7 +209,7 @@ public class Axis
         // label coordinates and align
         float yForXAxisText =0;
         xAxisTextAlign = GdxUtil.HALIGN_CENTER | GdxUtil.VALIGN_BOTTOM;
-        if (yForXAxisText < yMin + yGrid/2)
+        if (yForXAxisText < yMin + yGrid / 2)
         {
             yForXAxisText = yMin;
             xAxisTextAlign = GdxUtil.HALIGN_CENTER | GdxUtil.VALIGN_TOP;
@@ -216,7 +221,7 @@ public class Axis
 
         float xForYAxisText =0;
         yAxisTextAlign = GdxUtil.HALIGN_LEFT | GdxUtil.VALIGN_CENTER;
-        if (xForYAxisText < xMin + xGrid/2)
+        if (xForYAxisText < xMin + xGrid / 2)
         {
             xForYAxisText = xMin;
             yAxisTextAlign = GdxUtil.HALIGN_RIGHT | GdxUtil.VALIGN_CENTER;
@@ -288,7 +293,7 @@ public class Axis
             yAxisText.add(label);
             yAxisTextPosition.add(getYAxisTextPosition(yAxisTextPosition.newElement(), xForYAxisText, y, 0));
         }
-        
+
         // realign the Left aligned text to right aligned so that
         // decimal comma matches vertically
         if ((yAxisTextAlign & GdxUtil.HALIGN_RIGHT) == GdxUtil.HALIGN_RIGHT)

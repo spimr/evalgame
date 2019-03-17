@@ -23,6 +23,10 @@ public class EvalGame implements ApplicationListener
     ImageTextButton plusButton;
     ImageTextButton minusButton;
 
+    boolean expressionValid;
+
+    AbstractGestureListener gestureListener;
+    
     Axis axis;
     Graph graph;
     GraphUpdater graphUpdater=new GraphUpdater();
@@ -38,6 +42,7 @@ public class EvalGame implements ApplicationListener
 
         // actors
         Label expressionLabel = new Label("f(x)=", GdxUtil.getSkin());
+
         expressionField = new TextField("", GdxUtil.getSkin());
         expressionField.addListener(new ChangeListener(){
                 public void changed(com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent p1, com.badlogic.gdx.scenes.scene2d.Actor p2)
@@ -48,6 +53,9 @@ public class EvalGame implements ApplicationListener
 
         expressionStatusLabel = new Label("", GdxUtil.getSkin());
         expressionStatusLabel.setWrap(true);
+        Label.LabelStyle expressionStatusLabelStyle = new Label.LabelStyle(expressionStatusLabel.getStyle());
+        expressionStatusLabelStyle.background = GdxUtil.getColoredDrawable(Color.WHITE);
+        expressionStatusLabel.setStyle(expressionStatusLabelStyle);
 
         exitButton = GdxUtil.getButton("Exit", "ExitButton-32x32.png", GdxUtil.getSkin());
         exitButton.addListener(new ClickListener(){
@@ -114,10 +122,10 @@ public class EvalGame implements ApplicationListener
         expressionFieldAction(Graph.TEST_EXPRESSION);
 
         // input processor
-        //GestureDetector graphInputProcessor = new GestureDetector(new ExploreGraphListener());
-        //GestureDetector graphInputProcessor = new GestureDetector(new SimpleCameraGestureListener(axis));
-        GestureDetector graphInputProcessor = new GestureDetector(new BetterCameraGestureListener(axis, graph, graphUpdater));
-        GdxUtil.setInputProcessor(graphInputProcessor);
+        //SimpleCameraGestureListener gestureListener = new SimpleCameraGestureListener(axis);
+        //gestureListener = new ExploreGraphGestureListener(axis, graph, graphUpdater);
+        gestureListener = new BetterCameraGestureListener(axis, graph, graphUpdater);
+        GdxUtil.setInputProcessor(gestureListener);
     }
 
     @Override
@@ -156,9 +164,10 @@ public class EvalGame implements ApplicationListener
     public void expressionFieldAction(String newExpression)
     {
         String newExpressionTrimmed = newExpression == null ? "" : newExpression.trim();
-        boolean validExpression = true;
+        expressionValid = true;
         if (newExpressionTrimmed.length() == 0)
         {
+            graph.expression = newExpressionTrimmed;
             graph.expressionStatus = "Enter expression (e.g. 3*x^2)";
         }
         else
@@ -172,22 +181,27 @@ public class EvalGame implements ApplicationListener
             catch (EvalUtil.SyntaxException ex)
             {
                 graph.expressionStatus = ex.getMessage();
-                validExpression = false;
+                expressionValid = false;
             }
         }
-        expressionStatusLabel.setText(graph.expressionStatus);
-        expressionStatusLabel.setWidth(expressionField.getWidth());
-        expressionStatusLabel.setHeight(expressionStatusLabel.getPrefHeight());
-        expressionStatusLabel.getStyle().font.setColor(validExpression ? Color.BLACK : Color.RED);
-        expressionStatusLabel.invalidate();
-
-        if (validExpression)
+        setExpressionStatus(graph.expressionStatus);
+        if (expressionValid)
         {
             graph.calculateDomain();
             axis.setWorldSize(graph.getXMin(), graph.getXMax(), graph.getXGrid(), graph.getYMin(), graph.getYMax(), graph.getYGrid());
             axis.calculateAxis();
             graph.calculatePlot(axis.xMin, axis.xMax, axis.xGrid, axis.yMin, axis.yMax, axis.yGrid, graphUpdater);
         }
+    }
+
+    public void setExpressionStatus(String expressionStatus)
+    {
+        expressionStatusLabel.setText(expressionStatus);
+        expressionStatusLabel.setWidth(expressionField.getWidth());
+        expressionStatusLabel.setHeight(expressionStatusLabel.getPrefHeight());
+        expressionStatusLabel.getStyle().font.setColor(expressionValid ? Color.BLACK : Color.RED);
+        expressionStatusLabel.invalidate();
+        expressionStatusLabel.setVisible(expressionStatus != null && expressionStatus.length() != 0);
     }
 
     public void exitButtonAction()
@@ -229,8 +243,7 @@ public class EvalGame implements ApplicationListener
 
         // begin
         GdxUtil.initBatchAndRenderer();
-        GdxUtil.log();
-
+        
         // axis
         axis.log();
         renderXAxisLines();
@@ -245,12 +258,10 @@ public class EvalGame implements ApplicationListener
         renderXAxisLabels();
         renderYAxisLabels();
 
-        // log
-        GdxUtil.log("rendererStartCount=" + GdxUtil.rendererStartCount);
-        GdxUtil.renderLogTexts();
-
+        // gesture listener log
+        gestureListener.log();
+        
         // end
-        GdxUtil.renderTextBuffer2Screen();
         GdxUtil.endBatchAndRenderer();
 
         // stage
@@ -329,6 +340,11 @@ public class EvalGame implements ApplicationListener
     {
         if (graph.plot != null)
         {
+            boolean plotObsolete = graph.isPlotObsolete();
+            Color plotLineColor = plotObsolete ? Color.LIGHT_GRAY : Color.BLACK;
+            Color blueDotColor = plotObsolete ? Color.LIGHT_GRAY : Color.BLUE;
+            Color redDotColor = plotObsolete ? Color.LIGHT_GRAY : Color.RED;
+
             Vector2 start =null;
             Vector2 end=null;
 
@@ -342,7 +358,7 @@ public class EvalGame implements ApplicationListener
                 end = graph.plot.screenPoints.get(i);
                 if (start != null && end != null)
                 {
-                    GdxUtil.renderLine(start, end, 1, Color.BLACK);
+                    GdxUtil.renderLine(start, end, 1, plotLineColor);
                 }
                 start = end;
             }
@@ -352,27 +368,53 @@ public class EvalGame implements ApplicationListener
                 end = graph.plot.screenPoints.get(i);
                 Vector2 blueDot = graph.plot.blueDotScreenPosition.get(i);
 
-                if (end != null && Graph.PLOT_RED_DOTS)
+                if (end != null && Graph.PLOT_RED_DOTS && !plotObsolete)
                 {
-                    GdxUtil.renderDot(end.x, end.y, 4, Color.RED);
+                    GdxUtil.renderDot(end.x, end.y, 4, redDotColor);
                 }
-                if (blueDot != null && Graph.PLOT_BLUE_DOTS)
+                if (blueDot != null && Graph.PLOT_BLUE_DOTS && !plotObsolete)
                 {   
-                    GdxUtil.renderDot(blueDot.x, blueDot.y, 4, Color.BLUE);
+                    GdxUtil.renderDot(blueDot.x, blueDot.y, 4, blueDotColor);
                 }
             }
 
-            for (int i=0; i < graph.plot.pointsCountXAxisText.size(); i++)
+            if (!plotObsolete)
             {
-                String text = graph.plot.pointsCountXAxisText.get(i);
-                Vector2 position = graph.plot.pointsCountXAxisPosition.get(i);
-                GdxUtil.renderText(text, position.x, position.y, GdxUtil.HALIGN_CENTER | GdxUtil.VALIGN_NO);
+                for (int i=0; i < graph.plot.pointsCountXAxisText.size(); i++)
+                {
+                    String text = graph.plot.pointsCountXAxisText.get(i);
+                    Vector2 position = graph.plot.pointsCountXAxisPosition.get(i);
+                    GdxUtil.renderText(text, position.x, position.y, GdxUtil.HALIGN_CENTER | GdxUtil.VALIGN_NO);
+                }
             }
         }
     }
 
     protected class GraphUpdater extends Graph.PlotCalculatorListener
     {
+        public void started()
+        {
+            if (expressionValid)
+            {
+                setExpressionStatus("Calculating Plot...");
+            }
+        }
+
+        public void progress(String progressText)
+        {
+        }
+
+        public void finished()
+        {
+            if (expressionValid)
+            {
+                setExpressionStatus("");
+            }
+        }
+
+        public void aborted()
+        {
+        }
     }
 
 }

@@ -88,6 +88,11 @@ public class GdxUtil
         return skin;
     }
 
+    public static void runInGdxLater(Runnable runnable)
+    {
+        Gdx.app.postRunnable(runnable);
+    }
+
     // --------------------------------------------------
     // batch and renderer
     // --------------------------------------------------
@@ -95,7 +100,7 @@ public class GdxUtil
     private static int batchStartCount =0;
 
     private static boolean rendererStarted = false;
-    public static int rendererStartCount=0;
+    private static int rendererStartCount=0;
     private static ShapeRenderer.ShapeType shapeType;
     private static float lineWidth;
 
@@ -103,7 +108,7 @@ public class GdxUtil
     {
         if (!batchStarted)
         {
-            endBatchAndRenderer();
+            endBatchAndRendererInternal();
         }
         batch.begin();
         batchStarted = true;
@@ -118,7 +123,7 @@ public class GdxUtil
         }
         if (GdxUtil.shapeType != shapeType || GdxUtil.lineWidth != lineWidth || !rendererStarted)
         {
-            endBatchAndRenderer();
+            endBatchAndRendererInternal();
             Gdx.gl.glLineWidth(lineWidth);
             renderer.setProjectionMatrix(camera.combined);
             renderer.begin(shapeType);
@@ -133,13 +138,33 @@ public class GdxUtil
     {
         batchStartCount = 0;
         rendererStartCount = 0;
-        initTextBuffer();
         shapeType = ShapeRenderer.ShapeType.Line;
         lineWidth = 1f;
-        logTexts.clear();
     }
 
     public static void endBatchAndRenderer()
+    {
+        // render all text before the log texts
+        // to make sure log texts will be on the top (including white background)
+        renderTextBuffer2Screen(); 
+
+        // render log texts
+        // first adding one which is needed to render log 
+        rendererStartCount++;
+        batchStartCount++;
+
+        // log gdx util internal variablea
+        log();
+
+        // render all log texts 
+        renderLogTexts();
+        renderTextBuffer2Screen(); 
+
+        // end batch and renderer
+        endBatchAndRendererInternal();
+    }
+
+    public static void endBatchAndRendererInternal()
     {
         if (batchStarted)
         {
@@ -230,6 +255,14 @@ public class GdxUtil
         logTexts.add(logText);    
     }
 
+    public static void log(Vector<String> logTextsToAdd)
+    {
+        for (String logText:logTextsToAdd)
+        {
+            logTexts.add(logText);    
+        }
+    }
+
     public static String getDate()
     {
         String result;
@@ -262,6 +295,8 @@ public class GdxUtil
         log("screenHeight=" + screenHeight);
         log("zoom=" + camera.zoom);   
         log("fps=" + Math.round(1 / Gdx.graphics.getDeltaTime()));
+        log("rendererStartCount=" + rendererStartCount);
+        log("batchStartCount=" + batchStartCount);
         log("");
     }
 
@@ -272,6 +307,7 @@ public class GdxUtil
         {
             renderLogText(logText);
         }
+        logTexts.clear();
     }
 
     public static void renderLogText(String text)
@@ -284,8 +320,7 @@ public class GdxUtil
     // render text
     // --------------------------------------------------
     private static Vector<String> textBufferText = new Vector<>();
-    private static Vector<Float> textBufferX = new Vector<>(); 
-    private static Vector<Float> textBufferY = new Vector<>(); 
+    private static Vector2List textBufferPosition = new Vector2List(); 
 
     private static Vector2 renderText_RenderedTextSize = new Vector2();
     private static Vector2 renderText_RenderedTextBoxSize = new Vector2();
@@ -341,18 +376,10 @@ public class GdxUtil
         return renderText_RenderedTextSize;
     }
 
-    public static void initTextBuffer()
-    {
-        textBufferText.clear();
-        textBufferX.clear();
-        textBufferY.clear();
-    }
-
     public static void renderText2TextBuffer(String text, float x, float y)
     {
         textBufferText.add(text);
-        textBufferX.add(x);
-        textBufferY.add(y);
+        textBufferPosition.add(textBufferPosition.newElement().set(x, y));
     }
 
     public static void renderTextBuffer2Screen()
@@ -361,10 +388,11 @@ public class GdxUtil
         for (int i=0; i < textBufferText.size(); i++)
         {
             String text= textBufferText.get(i);
-            float x= textBufferX.get(i);
-            float y= textBufferY.get(i);
-            font.draw(batch, text, x, y);
+            Vector2 position=textBufferPosition.get(i); 
+            font.draw(batch, text, position.x, position.y);
         }
+        textBufferText.clear();
+        textBufferPosition.clear();
     }
 
     // --------------------------------------------------
@@ -414,6 +442,19 @@ public class GdxUtil
     }    
 
     // --------------------------------------------------
+    // style support
+    // --------------------------------------------------
+    public static Drawable getColoredDrawable(Color color)
+    {
+        Drawable result;
+        Pixmap labelColor = new Pixmap(1, 1, Pixmap.Format.RGB888);
+        labelColor.setColor(Color.WHITE);
+        labelColor.fill();
+        result = new Image(new Texture(labelColor)).getDrawable();
+        return result;
+    }
+
+    // --------------------------------------------------
     // stage
     // --------------------------------------------------
     public static Stage getStage()
@@ -426,12 +467,12 @@ public class GdxUtil
         stage.addActor(actor);
     }
 
-    public static void setInputProcessor(GestureDetector gestureDector)
+    public static void setInputProcessor(GestureDetector.GestureAdapter gestureListener)
     {
-        InputMultiplexer inputMultiplexer = new InputMultiplexer(GdxUtil.getStage(), gestureDector);
+        GestureDetector gestureDetector = new GestureDetector(gestureListener);
+        InputMultiplexer inputMultiplexer = new InputMultiplexer(GdxUtil.getStage(), gestureDetector);
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
-
 
     public static void renderStage()
     {

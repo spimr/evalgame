@@ -1,84 +1,42 @@
 package com.mycompany.mygame;
 
-import com.badlogic.gdx.*;
-import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.graphics.g2d.*;
-import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.math.*;
-import com.badlogic.gdx.graphics.glutils.*;
 
-import java.util.*;
-import com.badlogic.gdx.input.*;
-
-public class BetterCameraGestureListener extends GestureDetector.GestureAdapter
+public class BetterCameraGestureListener extends AbstractGestureListener
 {
-    Axis axis;
-    Graph graph;
-    Graph.PlotCalculatorListener plotCalculatorListener;
-    
-    Vector2 screenGrid = null;
     float lastZoom=-1;
     float lastInitialDistance=-1;
 
-    public BetterCameraGestureListener (Axis axis, Graph graph, Graph.PlotCalculatorListener plotCalculatorListener)
+    public BetterCameraGestureListener(Axis axis, Graph graph, Graph.PlotCalculatorListener plotCalculatorListener)
     {
-        this.axis=axis;
-        this.graph=graph;
-        this.plotCalculatorListener=plotCalculatorListener;
+        super(axis, graph, plotCalculatorListener);
     }
 
     @Override
-    public boolean pan(float x, float y, float deltaX, float deltaY)
+    public boolean panImpl(float x, float y, float deltaX, float deltaY)
     {
-        if (screenGrid == null)
-        {
-            screenGrid = new Vector2();
-            axis.graph2Screen(screenGrid, axis.xMin + axis.xGrid, axis.yMin + axis.yGrid);
-        }
-
-        float graphDeltaX = deltaX * (axis.xGrid / screenGrid.x);
-        float graphDeltaY = -deltaY * (axis.xGrid / screenGrid.x);
-
-        boolean changeAxis = false;
+        float zoom = GdxUtil.getCameraZoom();
+        float graphDeltaX = deltaX * (axis.xGrid / screenGrid.x) * zoom;
+        float graphDeltaY = -deltaY * (axis.yGrid / screenGrid.y) * zoom;
 
         float newXMin = axis.xMin - graphDeltaX;
         float newXMax = axis.xMax - graphDeltaX;
-        if (NumberUtil.isReasonable(newXMin) &&
-            NumberUtil.isReasonable(newXMax))
-        {
-            changeAxis = true;
-        }
-        
+
         float newYMin = axis.yMin - graphDeltaY;
         float newYMax = axis.yMax - graphDeltaY;
-        if (NumberUtil.isReasonable(newYMin) &&
-            NumberUtil.isReasonable(newYMax))
-        {
-            changeAxis = true;
-        }
 
-        if (changeAxis)
-        {
-            if (axis.setWorldSize(newXMin, newXMax, axis.xGrid, newYMin, newYMax, axis.yGrid))
-            {
-                axis.calculateAxis();
-                graph.calculatePlot(axis.xMin, 
-                                    axis.xMax, 
-                                    axis.xGrid, 
-                                    axis.yMin, 
-                                    axis.yMax, 
-                                    axis.yGrid, 
-                                    plotCalculatorListener);
-            }
-        }
-        
-        return true;
+        updateDuringGesture(newXMin, 
+                            newXMax, 
+                            axis.xGrid, 
+                            newYMin, 
+                            newYMax, 
+                            axis.yGrid);
+
+        return true;                            
     }
-    
-    @Override
-    public boolean panStop (float x, float y, int pointer, int button)
+
+    public boolean panStopImpl(float x, float y, int pointer, int button)
     {
-        screenGrid = null;
         return true;
     }
 
@@ -104,16 +62,54 @@ public class BetterCameraGestureListener extends GestureDetector.GestureAdapter
         axis.calculateAxis();
         return true;
     }
-    
+
     @Override
-    public boolean pinch(Vector2 initialPointer1, Vector2 initialPointer2, Vector2 currentPointer1, Vector2 currentPointer2)
+    public boolean pinchImpl(Vector2 initialPointer1, Vector2 initialPointer2, Vector2 currentPointer1, Vector2 currentPointer2)
     {
         return true;
     }
 
     @Override
-    public void pinchStop()
+    public void pinchStopImpl()
     {
     }
-    
+
+    // ---------------------------------------------------------------------
+    // grid = M*10^E
+    // where M in {1, 2, 5}
+    //       E in Integer
+    //
+    // example to get larger grid
+    // 1,      2,      5,      10,     20,     50,     100,    ...
+    // 1*10^0, 2*10^0, 5*10^0, 1*10^1, 2*10^1, 5*10^1, 1*10^2, ...
+    //
+    // example to get smaller grid
+    // 0.5,     0.2,     0.1,     0.05,    0.02,    0.01,    0.005, ...
+    // 5*10^-1, 2*10^-1, 1*10^-1, 5*10^-2, 2*10^-2, 1*10^-2, 5*10^-3, ...
+    //
+    // calculation of M and E from the given grid
+    // float grid = ...;
+    // int M = 0;
+    // int E = 0;
+    // for (M in {1, 2, 5})
+    //    float e=log(grid/M,10)
+    //    if (Math.abs (e-Math.round(e)) < 0.00001)
+    //      E=Math.round(e);
+    //      break;
+    //    end if
+    // end for
+    // ---------------------------------------------------------------------
+    /*
+    public static float getLargerGrid(float grid)
+    {
+        float result = 0;
+        return result;
+    }
+
+    public static float getLargerGrid(float grid)
+    {
+        float result = 0;
+        return result;
+    }
+    */
 }
